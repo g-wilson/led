@@ -10,7 +10,9 @@ To run on the Pi, it requires compiling the [LED matrix C bindings](https://gith
 
 `go run cmd/pi/main.go`
 
-### Example .env
+### Config
+
+This project uses dotenv to manage config. Create a `.env` file before running:
 
 ```
 # Weather settings
