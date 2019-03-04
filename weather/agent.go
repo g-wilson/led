@@ -39,7 +39,18 @@ func populateCache(client *DarkskyClient, cache *Cache, options AgentOptions) (e
 		return
 	}
 
-	cache.Today = dw.Days[2]
+	cache.Today = dw.Days[0]
+
+	// now := time.Now()
+	// afternoon, err := time.Parse(time.RFC3339,
+	// 	fmt.Sprintf("%d-%02d-%02dT16:00:00-00:00", now.Year(), now.Month(), now.Day()),
+	// )
+
+	// if now.Before(afternoon) {
+	// 	cache.Today = dw.Days[0]
+	// } else {
+	// 	cache.Today = dw.Days[1]
+	// }
 
 	return
 }

@@ -19,9 +19,6 @@ import (
 
 var fontFace *fopix.Font
 
-var weatherClient *weather.DarkskyClient
-var weatherLatitude string
-var weatherLongitude string
 var weatherCache *weather.Cache
 
 func init() {
@@ -33,8 +30,7 @@ func init() {
 	fontFace = getFontFace()
 
 	weatherRefresh, _ := strconv.ParseInt(os.Getenv("WEATHER_REFRESH"), 10, 32)
-	weatherClient = getWeatherClient()
-	weatherCache = weather.NewAgent(weatherClient, weather.AgentOptions{
+	weatherCache = weather.NewAgent(getWeatherClient(), weather.AgentOptions{
 		Refresh:   int(weatherRefresh),
 		Latitude:  os.Getenv("WEATHER_LATITUDE"),
 		Longitude: os.Getenv("WEATHER_LONGITUDE"),
@@ -61,7 +57,7 @@ func getWeatherClient() *weather.DarkskyClient {
 }
 
 // NewFrameChannel returns a channel which can recieve image frames on each "tick"
-func NewFrameChannel(bounds image.Rectangle, frametime int) chan image.Image {
+func NewFrameChannel(bounds image.Rectangle, frametime int) <-chan image.Image {
 	frames := make(chan image.Image)
 
 	canvas := image.NewRGBA(bounds)
@@ -69,14 +65,6 @@ func NewFrameChannel(bounds image.Rectangle, frametime int) chan image.Image {
 	draw.Draw(canvas, bounds, &image.Uniform{color.Black}, image.ZP, draw.Src)
 
 	go func() {
-		frame, err := drawFrame(canvas)
-		if err != nil {
-			log.Println(err.Error())
-			close(frames)
-			return
-		}
-		frames <- frame
-
 		ticker := time.Tick(time.Duration(frametime) * time.Millisecond)
 		for range ticker {
 			frame, err := drawFrame(canvas)
