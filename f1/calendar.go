@@ -21,67 +21,67 @@ var Races = []Race{
 	},
 	Race{
 		Location:  "BAH",
-		Timestamp: "2019-03-31T16:10:00.000Z",
+		Timestamp: "2019-03-31T15:10:00.000Z",
 	},
 	Race{
 		Location:  "CHN",
-		Timestamp: "2019-04-14T07:10:00.000Z",
+		Timestamp: "2019-04-14T06:10:00.000Z",
 	},
 	Race{
 		Location:  "AZE",
-		Timestamp: "2019-04-28T13:10:00.000Z",
+		Timestamp: "2019-04-28T12:10:00.000Z",
 	},
 	Race{
 		Location:  "ESP",
-		Timestamp: "2019-05-21T14:10:00.000Z",
+		Timestamp: "2019-05-21T13:10:00.000Z",
 	},
 	Race{
 		Location:  "MCO",
-		Timestamp: "2019-05-26T14:10:00.000Z",
+		Timestamp: "2019-05-26T13:10:00.000Z",
 	},
 	Race{
 		Location:  "CAN",
-		Timestamp: "2019-06-09T19:10:00.000Z",
+		Timestamp: "2019-06-09T18:10:00.000Z",
 	},
 	Race{
 		Location:  "FRA",
-		Timestamp: "2019-06-23T14:10:00.000Z",
+		Timestamp: "2019-06-23T13:10:00.000Z",
 	},
 	Race{
 		Location:  "AUT",
-		Timestamp: "2019-06-30T14:10:00.000Z",
+		Timestamp: "2019-06-30T13:10:00.000Z",
 	},
 	Race{
 		Location:  "GBR",
-		Timestamp: "2019-07-14T14:10:00.000Z",
+		Timestamp: "2019-07-14T13:10:00.000Z",
 	},
 	Race{
 		Location:  "GER",
-		Timestamp: "2019-07-28T14:10:00.000Z",
+		Timestamp: "2019-07-28T13:10:00.000Z",
 	},
 	Race{
 		Location:  "HUN",
-		Timestamp: "2019-08-04T14:10:00.000Z",
+		Timestamp: "2019-08-04T13:10:00.000Z",
 	},
 	Race{
 		Location:  "BEL",
-		Timestamp: "2019-09-01T14:10:00.000Z",
+		Timestamp: "2019-09-01T13:10:00.000Z",
 	},
 	Race{
 		Location:  "ITA",
-		Timestamp: "2019-09-08T14:10:00.000Z",
+		Timestamp: "2019-09-08T13:10:00.000Z",
 	},
 	Race{
 		Location:  "SGP",
-		Timestamp: "2019-09-22T13:10:00.000Z",
+		Timestamp: "2019-09-22T12:10:00.000Z",
 	},
 	Race{
 		Location:  "RUS",
-		Timestamp: "2019-09-29T12:10:00.000Z",
+		Timestamp: "2019-09-29T11:10:00.000Z",
 	},
 	Race{
 		Location:  "JAP",
-		Timestamp: "2019-10-13T06:10:00.000Z",
+		Timestamp: "2019-10-13T05:10:00.000Z",
 	},
 	Race{
 		Location:  "MEX",
