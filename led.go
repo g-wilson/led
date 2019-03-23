@@ -19,8 +19,8 @@ import (
 )
 
 var fontFace *fopix.Font
-
 var weatherCache *weather.Cache
+var location *time.Location
 
 func init() {
 	err := godotenv.Load()
@@ -36,6 +36,11 @@ func init() {
 		Latitude:  os.Getenv("WEATHER_LATITUDE"),
 		Longitude: os.Getenv("WEATHER_LONGITUDE"),
 	})
+
+	location, err = time.LoadLocation("Europe/London")
+	if err != nil {
+		log.Fatalln(err)
+	}
 }
 
 func getFontFace() *fopix.Font {
@@ -87,7 +92,7 @@ func drawFrame(c *image.RGBA) (*image.RGBA, error) {
 	// clear canvas before drawing?
 	draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.ZP, draw.Src)
 
-	addText(c, 0, -1, time.Now().UTC().Format("15:04"), &color.RGBA{255, 255, 255, 255})
+	addText(c, 0, -1, getTimeString(), &color.RGBA{255, 255, 255, 255})
 
 	weatherX := 0
 	weatherY := 12
@@ -125,4 +130,8 @@ func formatDuration(u time.Duration) string {
 	m := u / time.Minute
 
 	return fmt.Sprintf("%02dd %02dh %02dm", d, h, m)
+}
+
+func getTimeString() string {
+	return time.Now().UTC().In(location).Format("15:04")
 }
