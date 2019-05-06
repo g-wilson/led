@@ -33,7 +33,7 @@ var Races = []Race{
 	},
 	Race{
 		Location:  "ESP",
-		Timestamp: "2019-05-21T13:10:00.000Z",
+		Timestamp: "2019-05-12T13:10:00.000Z",
 	},
 	Race{
 		Location:  "MCO",
