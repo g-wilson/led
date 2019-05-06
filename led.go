@@ -133,5 +133,5 @@ func formatDuration(u time.Duration) string {
 }
 
 func getTimeString() string {
-	return time.Now().UTC().In(location).Format("15:04")
+	return time.Now().UTC().In(location).Format("15:04 Mon Jan 2")
 }
