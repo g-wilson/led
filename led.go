@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"image/draw"
 	"log"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/g-wilson/led/f1"
@@ -16,11 +14,13 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/toelsiba/fopix"
+	"golang.org/x/image/draw"
 )
 
 var fontFace *fopix.Font
 var weatherCache *weather.Cache
 var location *time.Location
+var escImage image.Image
 
 func init() {
 	err := godotenv.Load()
@@ -30,14 +30,19 @@ func init() {
 
 	fontFace = getFontFace()
 
-	weatherRefresh, _ := strconv.ParseInt(os.Getenv("WEATHER_REFRESH"), 10, 32)
-	weatherCache = weather.NewAgent(getWeatherClient(), weather.AgentOptions{
-		Refresh:   int(weatherRefresh),
-		Latitude:  os.Getenv("WEATHER_LATITUDE"),
-		Longitude: os.Getenv("WEATHER_LONGITUDE"),
-	})
+	// weatherRefresh, _ := strconv.ParseInt(os.Getenv("WEATHER_REFRESH"), 10, 32)
+	// weatherCache = weather.NewAgent(getWeatherClient(), weather.AgentOptions{
+	// 	Refresh:   int(weatherRefresh),
+	// 	Latitude:  os.Getenv("WEATHER_LATITUDE"),
+	// 	Longitude: os.Getenv("WEATHER_LONGITUDE"),
+	// })
 
 	location, err = time.LoadLocation("Europe/London")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	escImage, err = loadImageFile("./assets/esc2019.png")
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -73,7 +78,8 @@ func NewFrameChannel(bounds image.Rectangle, frametime int) <-chan image.Image {
 	go func() {
 		ticker := time.Tick(time.Duration(frametime) * time.Millisecond)
 		for range ticker {
-			frame, err := drawFrame(canvas)
+			// frame, err := drawFrame(bounds)
+			frame, err := drawFrameEurovision(bounds)
 
 			if err != nil {
 				log.Println(err.Error())
@@ -88,8 +94,32 @@ func NewFrameChannel(bounds image.Rectangle, frametime int) <-chan image.Image {
 	return frames
 }
 
-func drawFrame(c *image.RGBA) (*image.RGBA, error) {
-	// clear canvas before drawing?
+func drawFrameEurovision(bounds image.Rectangle) (*image.RGBA, error) {
+	c := image.NewRGBA(bounds)
+	draw.Draw(c, bounds, &image.Uniform{color.Black}, image.ZP, draw.Src)
+
+	draw.BiLinear.Scale(c, bounds, escImage, escImage.Bounds(), draw.Over, nil)
+
+	mask := image.Rectangle{
+		Min: image.Point{X: 0, Y: 20},
+		Max: image.Point{X: bounds.Max.X, Y: bounds.Max.Y},
+	}
+
+	draw.Draw(c, mask, &image.Uniform{color.Black}, image.ZP, draw.Src)
+
+	escStartsAt, _ := time.Parse(time.RFC3339, "2019-05-18T20:00:00.000+01:00")
+
+	if time.Until(escStartsAt) < 0 {
+		return c, nil
+	}
+
+	addText(c, 10, 22, formatDurationSeconds(time.Until(escStartsAt)), &color.RGBA{100, 150, 255, 255})
+
+	return c, nil
+}
+
+func drawFrame(bounds image.Rectangle) (*image.RGBA, error) {
+	c := image.NewRGBA(bounds)
 	draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.ZP, draw.Src)
 
 	addText(c, 0, -1, getTimeString(), &color.RGBA{255, 255, 255, 255})
@@ -115,23 +145,4 @@ func addText(c *image.RGBA, x, y int, text string, col *color.RGBA) {
 	fontFace.Scale(1)
 	fontFace.Color(col)
 	fontFace.DrawText(c, image.Point{X: x, Y: y}, text)
-}
-
-// Not actually days - 24h periods because that's much easier and honestly who needs daylight savings
-func formatDuration(u time.Duration) string {
-	u = u.Round(time.Minute)
-
-	d := u / (time.Hour * 24)
-	u -= d * (time.Hour * 24)
-
-	h := u / time.Hour
-	u -= h * time.Hour
-
-	m := u / time.Minute
-
-	return fmt.Sprintf("%02dd %02dh %02dm", d, h, m)
-}
-
-func getTimeString() string {
-	return time.Now().UTC().In(location).Format("15:04 Mon Jan 2")
 }
