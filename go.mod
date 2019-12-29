@@ -10,3 +10,5 @@ require (
 	golang.org/x/mobile v0.0.0-20190302063618-b8c6dab863a6
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 )
+
+go 1.13

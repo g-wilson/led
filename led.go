@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/g-wilson/led/f1"
 	"github.com/g-wilson/led/weather"
 
 	"github.com/joho/godotenv"
@@ -100,9 +99,9 @@ func drawFrame(bounds image.Rectangle) (*image.RGBA, error) {
 	addText(c, weatherX, weatherY, fmt.Sprintf("%02.f", weatherCache.Today.ApparentTemperatureLow)+"oC", &color.RGBA{80, 80, 255, 255})
 	addText(c, weatherX+17, weatherY, fmt.Sprintf("%02.f", weatherCache.Today.ApparentTemperatureHigh)+"oC", &color.RGBA{255, 150, 0, 255})
 
-	race := f1.GetNextRace()
-	if race != nil {
-		addText(c, 0, 26, race.Location+": "+formatDuration(race.Until()), &color.RGBA{255, 20, 20, 255})
+	event := GetNextEvent()
+	if event != nil {
+		addText(c, 0, 26, event.Name+":"+formatDuration(event.Until()), &color.RGBA{255, 20, 20, 255})
 	}
 
 	return c, nil
