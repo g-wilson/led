@@ -20,7 +20,6 @@ import (
 var fontFace *fopix.Font
 var weatherCache *weather.Cache
 var location *time.Location
-var escImage image.Image
 
 func init() {
 	err := godotenv.Load()
