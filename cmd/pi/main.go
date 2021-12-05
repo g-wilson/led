@@ -10,7 +10,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/g-wilson/led"
+	"github.com/g-wilson/led/clock"
+	"github.com/g-wilson/led/framestreamer"
 
 	"github.com/joho/godotenv"
 	rgbmatrix "github.com/mcuadros/go-rpi-rgb-led-matrix"
@@ -26,7 +27,6 @@ func init() {
 func main() {
 	config := &rgbmatrix.DefaultConfig
 
-	refresh, _ := strconv.ParseInt(os.Getenv("LED_REFRESH"), 10, 32)
 	rows, _ := strconv.ParseInt(os.Getenv("LED_ROWS"), 10, 32)
 	cols, _ := strconv.ParseInt(os.Getenv("LED_COLS"), 10, 32)
 	pwmb, _ := strconv.ParseInt(os.Getenv("LED_PWM_BITS"), 10, 32)
@@ -42,26 +42,40 @@ func main() {
 
 	m, err := rgbmatrix.NewRGBLedMatrix(config)
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 
 	c := rgbmatrix.NewCanvas(m)
+	draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
 
-	draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.ZP, draw.Src)
+	clockApp, err := clock.New()
+	if err != nil {
+		log.Fatalln(err)
+	}
 
-	frames := led.NewFrameChannel(c.Bounds(), int(refresh))
+	fs := framestreamer.New(framestreamer.Params{
+		Bounds:      c.Bounds(),
+		FrametimeMs: framestreamer.OneFPS,
+		Renderer:    clockApp,
+	})
 
 	go func() {
-		for frame := range frames {
-			draw.Draw(c, c.Bounds(), frame, image.ZP, draw.Src)
-			c.Render()
+		for {
+			select {
+			case err := <-fs.E:
+				log.Fatalln(err)
+			case frame := <-fs.C:
+				draw.Draw(c, c.Bounds(), frame, image.ZP, draw.Src)
+				c.Render()
+			}
 		}
-		fmt.Println("Frame channel closed, exiting")
-		os.Exit(1)
 	}()
+	go fs.Start()
 
 	buf := bufio.NewReader(os.Stdin)
 	fmt.Println("Press return to exit")
-	_, _ = buf.ReadBytes('\n')
+	_, _ = buf.ReadBytes('\n') // block for user input
+
+	fs.Stop()
 	os.Exit(0)
 }

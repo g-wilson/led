@@ -1,4 +1,4 @@
-package led
+package clock
 
 import (
 	"time"
@@ -14,15 +14,15 @@ func (e Event) Until() time.Duration {
 	return time.Until(startsAt)
 }
 
-var Events = []Event{
-	Event{
-		Name:      "TEST",
-		Timestamp: "2021-08-31T13:00:00.000Z",
+var events = []Event{
+	{
+		Name:      "XMAS",
+		Timestamp: "2021-12-25T00:00:00.000Z",
 	},
 }
 
-func GetNextEvent() (r *Event) {
-	for _, r := range Events {
+func getNextEvent() (r *Event) {
+	for _, r := range events {
 		until := r.Until()
 
 		if until.Seconds() < 0 {
