@@ -1,11 +1,12 @@
 package clock
 
 import (
+	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"image"
 	"image/color"
-	"image/png"
 	"os"
 	"strconv"
 	"time"
@@ -17,8 +18,11 @@ import (
 	"golang.org/x/image/draw"
 )
 
+//go:embed fonts/tom-thumb-new.json
+var fontSource []byte
+
 type ClockRenderer struct {
-	fontFace     *fopix.Font
+	font         *fopix.Drawer
 	weatherCache *weather.Cache
 	location     *time.Location
 }
@@ -29,7 +33,12 @@ func New() (ClockRenderer, error) {
 		return ClockRenderer{}, fmt.Errorf("error loading .env file: %w", err)
 	}
 
-	fontFace, err := fopix.NewFromFile("./clock/fonts/tom-thumb-new.json")
+	fontInfo := fopix.FontInfo{}
+	err = json.Unmarshal(fontSource, &fontInfo)
+	if err != nil {
+		return ClockRenderer{}, err
+	}
+	font, err := fopix.NewDrawer(fontInfo)
 	if err != nil {
 		return ClockRenderer{}, err
 	}
@@ -53,7 +62,7 @@ func New() (ClockRenderer, error) {
 	}
 
 	return ClockRenderer{
-		fontFace:     fontFace,
+		font:         font,
 		weatherCache: weatherCache,
 		location:     location,
 	}, nil
@@ -63,29 +72,25 @@ func (r ClockRenderer) DrawFrame(bounds image.Rectangle) (*image.RGBA, error) {
 	c := image.NewRGBA(bounds)
 	draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.ZP, draw.Src)
 
-	r.addText(c, 0, -1, r.getTimeString(), &color.RGBA{255, 255, 255, 255})
+	r.addText(c, 0, -1, r.getTimeString(), color.RGBA{255, 255, 255, 255})
 
 	weatherX := 0
 	weatherY := 12
-	r.addText(c, weatherX, weatherY, fmt.Sprintf("%02.f", r.weatherCache.Today.ApparentTemperatureLow)+"oC", &color.RGBA{80, 80, 255, 255})
-	r.addText(c, weatherX+17, weatherY, fmt.Sprintf("%02.f", r.weatherCache.Today.ApparentTemperatureHigh)+"oC", &color.RGBA{255, 150, 0, 255})
+	r.addText(c, weatherX, weatherY, fmt.Sprintf("%02.f", r.weatherCache.Today.ApparentTemperatureLow)+"oC", color.RGBA{80, 80, 255, 255})
+	r.addText(c, weatherX+17, weatherY, fmt.Sprintf("%02.f", r.weatherCache.Today.ApparentTemperatureHigh)+"oC", color.RGBA{255, 150, 0, 255})
 
 	event := getNextEvent()
 	if event != nil {
-		r.addText(c, 0, 26, event.Name+":"+formatDuration(event.Until()), &color.RGBA{255, 20, 20, 255})
+		r.addText(c, 0, 26, event.Name+":"+formatDuration(event.Until()), color.RGBA{255, 20, 20, 255})
 	}
 
 	return c, nil
 }
 
-func (r ClockRenderer) addText(c *image.RGBA, x, y int, text string, col *color.RGBA) {
-	if col == nil {
-		col = &color.RGBA{255, 255, 255, 255}
-	}
-
-	r.fontFace.Scale(1)
-	r.fontFace.Color(col)
-	r.fontFace.DrawText(c, image.Point{X: x, Y: y}, text)
+func (r ClockRenderer) addText(c *image.RGBA, x, y int, text string, col color.RGBA) {
+	r.font.SetScale(1)
+	r.font.SetColor(col)
+	r.font.DrawText(c, image.Point{X: x, Y: y}, text)
 }
 
 func (r ClockRenderer) getTimeString() string {
@@ -122,24 +127,4 @@ func formatDurationSeconds(u time.Duration) string {
 	s := u / time.Second
 
 	return fmt.Sprintf("%02dh %02dm %02ds", h, m, s)
-}
-
-func loadImageFile(filename string) (image.Image, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	_, imageType, err := image.Decode(file)
-	if err != nil {
-		return nil, err
-	}
-	if imageType != "png" {
-		return nil, errors.New("image must be a png")
-	}
-
-	file.Seek(0, 0)
-
-	return png.Decode(file)
 }

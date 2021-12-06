@@ -21,7 +21,7 @@ var events = []Event{
 	},
 }
 
-func getNextEvent() (r *Event) {
+func getNextEvent() *Event {
 	for _, r := range events {
 		until := r.Until()
 
