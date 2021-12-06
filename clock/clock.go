@@ -1,12 +1,14 @@
 package clock
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"image"
 	"image/color"
+	_ "image/png"
 	"os"
 	"strconv"
 	"time"
@@ -21,10 +23,14 @@ import (
 //go:embed fonts/tom-thumb-new.json
 var fontSource []byte
 
+//go:embed images/xmastree.png
+var xmasImageSource []byte
+
 type ClockRenderer struct {
 	font         *fopix.Drawer
 	weatherCache *weather.Cache
 	location     *time.Location
+	xmasImage    image.Image
 }
 
 func New() (ClockRenderer, error) {
@@ -36,11 +42,17 @@ func New() (ClockRenderer, error) {
 	fontInfo := fopix.FontInfo{}
 	err = json.Unmarshal(fontSource, &fontInfo)
 	if err != nil {
-		return ClockRenderer{}, err
+		return ClockRenderer{}, fmt.Errorf("error loading font info file: %w", err)
 	}
 	font, err := fopix.NewDrawer(fontInfo)
 	if err != nil {
-		return ClockRenderer{}, err
+		return ClockRenderer{}, fmt.Errorf("error creating font drawer: %w", err)
+	}
+	font.SetScale(1)
+
+	xmasImage, _, err := image.Decode(bytes.NewReader(xmasImageSource))
+	if err != nil {
+		return ClockRenderer{}, fmt.Errorf("error loading xmas image: %w", err)
 	}
 
 	weatherAPIKey := os.Getenv("DARKSKY_API_KEY")
@@ -65,32 +77,32 @@ func New() (ClockRenderer, error) {
 		font:         font,
 		weatherCache: weatherCache,
 		location:     location,
+		xmasImage:    xmasImage,
 	}, nil
 }
 
 func (r ClockRenderer) DrawFrame(bounds image.Rectangle) (*image.RGBA, error) {
 	c := image.NewRGBA(bounds)
-	draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.ZP, draw.Src)
+	draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
 
-	r.addText(c, 0, -1, r.getTimeString(), color.RGBA{255, 255, 255, 255})
+	r.addText(c, image.Point{X: 0, Y: -1}, r.getTimeString(), color.RGBA{255, 255, 255, 255})
 
-	weatherX := 0
-	weatherY := 12
-	r.addText(c, weatherX, weatherY, fmt.Sprintf("%02.f", r.weatherCache.Today.ApparentTemperatureLow)+"oC", color.RGBA{80, 80, 255, 255})
-	r.addText(c, weatherX+17, weatherY, fmt.Sprintf("%02.f", r.weatherCache.Today.ApparentTemperatureHigh)+"oC", color.RGBA{255, 150, 0, 255})
+	r.addText(c, image.Point{X: 0, Y: 12}, fmt.Sprintf("%02.foC", r.weatherCache.Today.ApparentTemperatureLow), color.RGBA{80, 80, 255, 255})
+	r.addText(c, image.Point{X: 17, Y: 12}, fmt.Sprintf("%02.foC", r.weatherCache.Today.ApparentTemperatureHigh), color.RGBA{255, 150, 0, 255})
 
 	event := getNextEvent()
 	if event != nil {
-		r.addText(c, 0, 26, event.Name+":"+formatDuration(event.Until()), color.RGBA{255, 20, 20, 255})
+		r.addText(c, image.Point{X: 0, Y: 26}, event.Name+":"+formatDuration(event.Until()), color.RGBA{255, 20, 20, 255})
 	}
+
+	draw.Draw(c, c.Bounds(), r.xmasImage, image.Point{X: -44, Y: -11}, draw.Over)
 
 	return c, nil
 }
 
-func (r ClockRenderer) addText(c *image.RGBA, x, y int, text string, col color.RGBA) {
-	r.font.SetScale(1)
+func (r ClockRenderer) addText(c *image.RGBA, pos image.Point, text string, col color.RGBA) {
 	r.font.SetColor(col)
-	r.font.DrawText(c, image.Point{X: x, Y: y}, text)
+	r.font.DrawText(c, pos, text)
 }
 
 func (r ClockRenderer) getTimeString() string {
