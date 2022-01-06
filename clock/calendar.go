@@ -15,10 +15,10 @@ func (e Event) Until() time.Duration {
 }
 
 var events = []Event{
-	{
-		Name:      "XMAS",
-		Timestamp: "2021-12-25T00:00:00.000Z",
-	},
+	// {
+	// 	Name:      "XMAS",
+	// 	Timestamp: "2021-12-25T00:00:00.000Z",
+	// },
 }
 
 func getNextEvent() *Event {

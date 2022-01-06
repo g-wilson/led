@@ -1,7 +1,6 @@
 package clock
 
 import (
-	"bytes"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -23,14 +22,10 @@ import (
 //go:embed fonts/tom-thumb-new.json
 var fontSource []byte
 
-//go:embed images/xmastree.png
-var xmasImageSource []byte
-
 type ClockRenderer struct {
 	font         *fopix.Drawer
 	weatherCache *weather.Cache
 	location     *time.Location
-	xmasImage    image.Image
 }
 
 func New() (ClockRenderer, error) {
@@ -49,11 +44,6 @@ func New() (ClockRenderer, error) {
 		return ClockRenderer{}, fmt.Errorf("error creating font drawer: %w", err)
 	}
 	font.SetScale(1)
-
-	xmasImage, _, err := image.Decode(bytes.NewReader(xmasImageSource))
-	if err != nil {
-		return ClockRenderer{}, fmt.Errorf("error loading xmas image: %w", err)
-	}
 
 	weatherAPIKey := os.Getenv("DARKSKY_API_KEY")
 	if len(weatherAPIKey) == 0 {
@@ -77,7 +67,6 @@ func New() (ClockRenderer, error) {
 		font:         font,
 		weatherCache: weatherCache,
 		location:     location,
-		xmasImage:    xmasImage,
 	}, nil
 }
 
@@ -94,8 +83,6 @@ func (r ClockRenderer) DrawFrame(bounds image.Rectangle) (*image.RGBA, error) {
 	if event != nil {
 		r.addText(c, image.Point{X: 0, Y: 26}, event.Name+":"+formatDuration(event.Until()), color.RGBA{255, 20, 20, 255})
 	}
-
-	draw.Draw(c, c.Bounds(), r.xmasImage, image.Point{X: -44, Y: -11}, draw.Over)
 
 	return c, nil
 }
