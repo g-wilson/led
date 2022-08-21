@@ -11,7 +11,7 @@ import (
 	"strconv"
 
 	"github.com/g-wilson/led/clock"
-	"github.com/g-wilson/led/framestreamer"
+	"github.com/g-wilson/led/pkg/framestreamer"
 
 	"github.com/joho/godotenv"
 	rgbmatrix "github.com/mcuadros/go-rpi-rgb-led-matrix"

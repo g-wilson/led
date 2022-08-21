@@ -1,4 +1,4 @@
-package weather
+package darksky
 
 import (
 	"encoding/json"
@@ -56,41 +56,35 @@ type CurrentWeather struct {
 
 type DayWeather struct {
 	// Time                 time.Time `json:"time"`
-	Summary string `json:"summary"`
-	Icon    string `json:"icon"`
-	// "sunriseTime": 1551595369,
-	// "sunsetTime": 1551635074,
+	Summary     string `json:"summary"`
+	Icon        string `json:"icon"`
+	SunriseTime int64  `json:"sunriseTime"`
+	SunsetTime  int64  `json:"sunsetTime"`
 	// "moonPhase": 0.9,
 	// "precipIntensity": 0.3226,
 	// "precipIntensityMax": 0.7341,
 	// "precipIntensityMaxTime": 1551600000,
-	// "precipProbability": 0.98,
-	// "precipType": "rain",
-	// "temperatureHigh": 13.27,
+	PrecipProbability float32 `json:"precipProbability"`
+	PrecipType        string  `json:"precipType"`
+	TemperatureHigh   float32 `json:"temperatureHigh"`
 	// "temperatureHighTime": 1551628800,
-	// "temperatureLow": 5.01,
-	// "temperatureLowTime": 1551679200,
-	// "apparentTemperatureHigh": 13.27,
-	// "apparentTemperatureHighTime": 1551628800,
-	// "apparentTemperatureLow": 1.45,
-	// "apparentTemperatureLowTime": 1551682800,
-	TemperatureHigh         float32 `json:"temperatureHigh"`
 	ApparentTemperatureHigh float32 `json:"apparentTemperatureHigh"`
-	TemperatureLow          float32 `json:"temperatureLow"`
-	ApparentTemperatureLow  float32 `json:"apparentTemperatureLow"`
-	// "dewPoint": 8.73,
-	// "humidity": 0.83,
-	// "pressure": 998.94,
-	// "windSpeed": 16.72,
-	// "windGust": 45.56,
-	// "windGustTime": 1551639600,
-	// "windBearing": 225,
-	// "cloudCover": 0.87,
-	CloudCover float32 `json:"cloudCover"`
-	// "uvIndex": 2,
+	// "apparentTemperatureHighTime": 1551628800,
+	TemperatureLow float32 `json:"temperatureLow"`
+	// "temperatureLowTime": 1551679200,
+	ApparentTemperatureLow float32 `json:"apparentTemperatureLow"`
+	// "apparentTemperatureLowTime": 1551682800,
+	DewPoint    float32 `json:"dewPoint"`
+	Humidity    float32 `json:"humidity"`
+	Pressure    float32 `json:"pressure"`
+	WindSpeed   float32 `json:"windSpeed"`
+	WindGust    float32 `json:"windGust"`
+	WindBearing float32 `json:"windBearing"`
+	CloudCover  float32 `json:"cloudCover"`
+	UVIndex     uint8   `json:"uvIndex"`
 	// "uvIndexTime": 1551610800,
-	// "visibility": 7.28,
-	// "ozone": 337.38,
+	Visibility float32 `json:"visibility"`
+	Ozone      float32 `json:"ozone"`
 	// "temperatureMin": 9.58,
 	// "temperatureMinTime": 1551654000,
 	// "temperatureMax": 13.27,
@@ -101,25 +95,25 @@ type DayWeather struct {
 	// "apparentTemperatureMaxTime": 1551628800
 }
 
-type DarkskyClient struct {
+type Client struct {
 	apiKey string
 	client *http.Client
 }
 
-func New(apiKey string, client *http.Client) *DarkskyClient {
+func New(apiKey string, client *http.Client) *Client {
 	if client == nil {
 		client = &http.Client{
 			Timeout: time.Second * 10,
 		}
 	}
 
-	return &DarkskyClient{
+	return &Client{
 		client: client,
 		apiKey: apiKey,
 	}
 }
 
-func (c *DarkskyClient) GetForecast(path string, params *url.Values) (f *Forecast, err error) {
+func (c *Client) GetForecast(path string, params *url.Values) (f *Forecast, err error) {
 	req, err := http.NewRequest("GET", "https://api.darksky.net/forecast/"+c.apiKey+path, nil)
 	if err != nil {
 		return nil, err
@@ -159,7 +153,7 @@ func (c *DarkskyClient) GetForecast(path string, params *url.Values) (f *Forecas
 	return
 }
 
-func (c *DarkskyClient) GetCurrentWeather(lat, long string) (cw CurrentWeather, err error) {
+func (c *Client) GetCurrentWeather(lat, long string) (cw CurrentWeather, err error) {
 	f, err := c.GetForecast("/"+lat+","+long, &url.Values{
 		"exclude": {"minutely,hourly,daily,alerts,flags"},
 		"units":   {"uk2"},
@@ -171,7 +165,7 @@ func (c *DarkskyClient) GetCurrentWeather(lat, long string) (cw CurrentWeather, 
 	return f.Current, nil
 }
 
-func (c *DarkskyClient) GetHourlyWeather(lat, long string) (hw HourlyWeather, err error) {
+func (c *Client) GetHourlyWeather(lat, long string) (hw HourlyWeather, err error) {
 	f, err := c.GetForecast("/"+lat+","+long, &url.Values{
 		"exclude": {"currently,minutely,daily,alerts,flags"},
 		"units":   {"uk2"},
@@ -183,7 +177,7 @@ func (c *DarkskyClient) GetHourlyWeather(lat, long string) (hw HourlyWeather, er
 	return f.Hourly, nil
 }
 
-func (c *DarkskyClient) GetDailyWeather(lat, long string) (dw DailyWeather, err error) {
+func (c *Client) GetDailyWeather(lat, long string) (dw DailyWeather, err error) {
 	f, err := c.GetForecast("/"+lat+","+long, &url.Values{
 		"exclude": {"currently,minutely,hourly,alerts,flags"},
 		"units":   {"uk2"},

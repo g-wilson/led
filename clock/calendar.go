@@ -1,6 +1,7 @@
 package clock
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -33,4 +34,19 @@ func getNextEvent() *Event {
 	}
 
 	return nil
+}
+
+func formatDuration(u time.Duration) string {
+	u = u.Round(time.Minute)
+
+	// not actually days - 24h periods because that's much easier and honestly who needs daylight savings
+	d := u / (time.Hour * 24)
+	u -= d * (time.Hour * 24)
+
+	h := u / time.Hour
+	u -= h * time.Hour
+
+	m := u / time.Minute
+
+	return fmt.Sprintf("%02dd %02dh %02dm", d, h, m)
 }
