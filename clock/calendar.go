@@ -93,6 +93,16 @@ var events = []Event{
 		Timestamp: "2022-12-25T00:00:00.000Z",
 		Image:     xmasImage,
 	},
+	{
+		Name:      "2023",
+		Timestamp: "2023-01-0100:00:00.000Z",
+		Image:     xmasImage,
+	},
+	{
+		Name:      "GEORGE",
+		Timestamp: "2023-07-1100:00:00.000+01:00",
+		Image:     nil,
+	},
 }
 
 func getNextEvent() *Event {

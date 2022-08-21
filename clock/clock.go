@@ -8,7 +8,6 @@ import (
 	"image"
 	"image/color"
 	_ "image/png"
-	"math"
 	"os"
 	"strconv"
 	"time"
@@ -74,11 +73,10 @@ func New() (*ClockRenderer, error) {
 	}
 
 	r := &ClockRenderer{
-		font:     font,
-		weather:  weatherAgent,
-		location: location,
-		pages:    []string{"countdown"},
-		// pages:        []string{"today", "tomorrow", "daylight"},
+		font:         font,
+		weather:      weatherAgent,
+		location:     location,
+		pages:        []string{"today", "tomorrow", "daylight", "countdown"},
 		currentPage:  0,
 		pageInterval: 5 * time.Second,
 	}
@@ -124,7 +122,7 @@ func (r *ClockRenderer) DrawFrame(bounds image.Rectangle) (*image.RGBA, error) {
 			if event.Image != nil {
 				draw.Draw(c, c.Bounds(), event.Image, image.Point{X: -44, Y: -9}, draw.Over)
 			}
-			halfway := 32 - int(math.Floor(float64((4*len(event.Name))/2)))
+			halfway := 32 - int(float64((4*len(event.Name))/2))
 			r.addText(c, image.Point{X: halfway, Y: 15}, event.Name, color.RGBA{60, 60, 215, 255})
 			r.addText(c, image.Point{X: 10, Y: 22}, formatDuration(event.Until()), color.RGBA{215, 0, 0, 255})
 		}
