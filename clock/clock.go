@@ -8,6 +8,7 @@ import (
 	"image"
 	"image/color"
 	_ "image/png"
+	"math"
 	"os"
 	"strconv"
 	"time"
@@ -73,10 +74,11 @@ func New() (*ClockRenderer, error) {
 	}
 
 	r := &ClockRenderer{
-		font:         font,
-		weather:      weatherAgent,
-		location:     location,
-		pages:        []string{"today", "tomorrow", "daylight"},
+		font:     font,
+		weather:  weatherAgent,
+		location: location,
+		pages:    []string{"countdown"},
+		// pages:        []string{"today", "tomorrow", "daylight"},
 		currentPage:  0,
 		pageInterval: 5 * time.Second,
 	}
@@ -94,10 +96,6 @@ func (r *ClockRenderer) DrawFrame(bounds image.Rectangle) (*image.RGBA, error) {
 	r.addText(c, image.Point{X: 0, Y: -1}, r.getTimeString(), color.RGBA{200, 200, 200, 255})
 
 	// Countdown timer
-	// event := getNextEvent()
-	// if event != nil {
-	// 	r.addText(c, image.Point{X: 0, Y: 26}, event.Name+":"+formatDuration(event.Until()), color.RGBA{255, 20, 20, 255})
-	// }
 
 	switch r.pages[r.currentPage] {
 	// Page 1: Today's weather
@@ -119,6 +117,17 @@ func (r *ClockRenderer) DrawFrame(bounds image.Rectangle) (*image.RGBA, error) {
 		sunset := w.SunsetTime.UTC().In(r.location).Format("15:04")
 		r.addText(c, image.Point{X: 4, Y: 10}, fmt.Sprintf("Sunrise %s", sunrise), color.RGBA{152, 168, 27, 255})
 		r.addText(c, image.Point{X: 8, Y: 18}, fmt.Sprintf("Sunset %s", sunset), color.RGBA{194, 27, 27, 255})
+
+	// Page 4: Event countdown
+	case "countdown":
+		if event := getNextEvent(); event != nil {
+			if event.Image != nil {
+				draw.Draw(c, c.Bounds(), event.Image, image.Point{X: -44, Y: -9}, draw.Over)
+			}
+			halfway := 32 - int(math.Floor(float64((4*len(event.Name))/2)))
+			r.addText(c, image.Point{X: halfway, Y: 15}, event.Name, color.RGBA{60, 60, 215, 255})
+			r.addText(c, image.Point{X: 10, Y: 22}, formatDuration(event.Until()), color.RGBA{215, 0, 0, 255})
+		}
 
 	}
 

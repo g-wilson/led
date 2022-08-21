@@ -77,9 +77,9 @@ func dayWeatherFromDarksky(in darksky.DayWeather) DayWeather {
 		ApparentTemperatureLow:  in.ApparentTemperatureLow,
 		SunriseTime:             time.Unix(in.SunriseTime, 0),
 		SunsetTime:              time.Unix(in.SunsetTime, 0),
-		Rainy:                   in.PrecipType == "rain" && in.PrecipProbability > 0.6,
+		Rainy:                   in.PrecipProbability > 0.25,
 		Windy:                   in.WindSpeed > 10 || in.WindGust > 20,
-		Cloudy:                  in.CloudCover > 0.4,
+		Cloudy:                  in.CloudCover > 0.6,
 		Humidity:                in.Humidity,
 	}
 }
