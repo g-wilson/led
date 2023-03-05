@@ -57,11 +57,14 @@ func New() (*ClockRenderer, error) {
 
 	tomorrowIoClient := tomorrowio.New(tomorrowIoAPIKey, nil)
 	weatherRefresh, _ := strconv.ParseInt(os.Getenv("WEATHER_REFRESH"), 10, 32)
-	weatherAgent := weather.New(tomorrowIoClient, weather.AgentOptions{
+	weatherAgent, err := weather.New(tomorrowIoClient, weather.AgentOptions{
 		Refresh:   int(weatherRefresh),
 		Latitude:  os.Getenv("WEATHER_LATITUDE"),
 		Longitude: os.Getenv("WEATHER_LONGITUDE"),
 	})
+	if err != nil {
+		return nil, fmt.Errorf("error initiating weather agent: %w", err)
+	}
 
 	location, err := time.LoadLocation("Europe/London")
 	if err != nil {

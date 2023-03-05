@@ -1,6 +1,7 @@
 package weather
 
 import (
+	"fmt"
 	"log"
 	"time"
 )
@@ -39,22 +40,28 @@ type AgentOptions struct {
 	Refresh   int
 }
 
-func New(client DayWeatherProvider, options AgentOptions) *Agent {
+func New(client DayWeatherProvider, options AgentOptions) (*Agent, error) {
 	a := &Agent{
 		client:  client,
 		options: options,
 	}
 
-	a.populateCache()
+	err := a.populateCache()
+	if err != nil {
+		return nil, err
+	}
 
 	go func() {
 		ticker := time.NewTicker(time.Duration(options.Refresh) * time.Second)
 		for range ticker.C {
-			_ = a.populateCache()
+			err := a.populateCache()
+			if err != nil {
+				log.Println(fmt.Errorf("error fetching weather: %w", err))
+			}
 		}
 	}()
 
-	return a
+	return a, nil
 }
 
 func (a *Agent) populateCache() (err error) {
