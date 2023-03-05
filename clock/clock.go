@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/g-wilson/led/pkg/calendar"
 	"github.com/g-wilson/led/pkg/darksky"
 	"github.com/g-wilson/led/pkg/weather"
 
@@ -113,7 +114,7 @@ func (r *ClockRenderer) DrawFrame(bounds image.Rectangle) (*image.RGBA, error) {
 
 	// Page 4: Event countdown
 	case "countdown":
-		if event := getNextEvent(); event != nil {
+		if event := calendar.GetNextEvent(); event != nil {
 			if event.Image != nil {
 				draw.Draw(c, c.Bounds(), event.Image, image.Point{X: -44, Y: -9}, draw.Over)
 			}
@@ -173,4 +174,27 @@ func (r *ClockRenderer) renderWeather(c *image.RGBA, w weather.DayWeather) {
 	}
 
 	r.addText(c, image.Point{X: summaryStart + 15, Y: 17}, fmt.Sprintf("H%02.f", (w.Humidity*100)), color.RGBA{230, 77, 0, 255})
+}
+
+func formatDuration(u time.Duration) string {
+	u = u.Round(time.Minute)
+
+	// not actually days - 24h periods because that's much easier and honestly who needs daylight savings
+	d := u / (time.Hour * 24)
+	u -= d * (time.Hour * 24)
+
+	h := u / time.Hour
+	u -= h * time.Hour
+
+	m := u / time.Minute
+	u -= m * time.Minute
+
+	s := u / time.Second
+
+	// less than one day to go, render more precise countdown
+	if d <= 0 {
+		return fmt.Sprintf("%02dh %02dm %02ds", h, m, s)
+	}
+
+	return fmt.Sprintf("%02dd %02dh %02dm", d, h, m)
 }
