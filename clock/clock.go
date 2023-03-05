@@ -25,16 +25,11 @@ var fontSource []byte
 
 type ClockRenderer struct {
 	font         *fopix.Drawer
-	weather      WeatherProvider
+	weather      *weather.Agent
 	location     *time.Location
 	pages        []string
 	currentPage  int
 	pageInterval time.Duration
-}
-
-type WeatherProvider interface {
-	GetToday() weather.DayWeather
-	GetTomorrow() weather.DayWeather
 }
 
 func New() (*ClockRenderer, error) {

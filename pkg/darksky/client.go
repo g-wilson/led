@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/g-wilson/led/pkg/weather"
 )
 
 type Forecast struct {
@@ -95,6 +97,19 @@ type DayWeather struct {
 	// "apparentTemperatureMaxTime": 1551628800
 }
 
+func (d DayWeather) ToDomain() weather.DayWeather {
+	return weather.DayWeather{
+		ApparentTemperatureHigh: d.ApparentTemperatureHigh,
+		ApparentTemperatureLow:  d.ApparentTemperatureLow,
+		SunriseTime:             time.Unix(d.SunriseTime, 0),
+		SunsetTime:              time.Unix(d.SunsetTime, 0),
+		Rainy:                   d.PrecipProbability > 0.25,
+		Windy:                   d.WindSpeed > 10 || d.WindGust > 20,
+		Cloudy:                  d.CloudCover > 0.6,
+		Humidity:                d.Humidity,
+	}
+}
+
 type Client struct {
 	apiKey string
 	client *http.Client
@@ -113,7 +128,19 @@ func New(apiKey string, client *http.Client) *Client {
 	}
 }
 
-func (c *Client) GetForecast(path string, params *url.Values) (f *Forecast, err error) {
+func (c *Client) GetTwoDayWeatherAtLocation(lat, lon string) (weather.TwoDayWeather, error) {
+	resp, err := c.getDailyWeather(lat, lon)
+	if err != nil {
+		return weather.TwoDayWeather{}, err
+	}
+
+	return weather.TwoDayWeather{
+		Today:    resp.Days[0].ToDomain(),
+		Tomorrow: resp.Days[1].ToDomain(),
+	}, nil
+}
+
+func (c *Client) getForecast(path string, params *url.Values) (f *Forecast, err error) {
 	req, err := http.NewRequest("GET", "https://api.darksky.net/forecast/"+c.apiKey+path, nil)
 	if err != nil {
 		return nil, err
@@ -153,8 +180,9 @@ func (c *Client) GetForecast(path string, params *url.Values) (f *Forecast, err 
 	return
 }
 
-func (c *Client) GetCurrentWeather(lat, long string) (cw CurrentWeather, err error) {
-	f, err := c.GetForecast("/"+lat+","+long, &url.Values{
+//nolint:staticcheck
+func (c *Client) getCurrentWeather(lat, lon string) (cw CurrentWeather, err error) {
+	f, err := c.getForecast("/"+lat+","+lon, &url.Values{
 		"exclude": {"minutely,hourly,daily,alerts,flags"},
 		"units":   {"uk2"},
 	})
@@ -165,8 +193,9 @@ func (c *Client) GetCurrentWeather(lat, long string) (cw CurrentWeather, err err
 	return f.Current, nil
 }
 
-func (c *Client) GetHourlyWeather(lat, long string) (hw HourlyWeather, err error) {
-	f, err := c.GetForecast("/"+lat+","+long, &url.Values{
+//nolint:staticcheck
+func (c *Client) getHourlyWeather(lat, lon string) (hw HourlyWeather, err error) {
+	f, err := c.getForecast("/"+lat+","+lon, &url.Values{
 		"exclude": {"currently,minutely,daily,alerts,flags"},
 		"units":   {"uk2"},
 	})
@@ -177,8 +206,8 @@ func (c *Client) GetHourlyWeather(lat, long string) (hw HourlyWeather, err error
 	return f.Hourly, nil
 }
 
-func (c *Client) GetDailyWeather(lat, long string) (dw DailyWeather, err error) {
-	f, err := c.GetForecast("/"+lat+","+long, &url.Values{
+func (c *Client) getDailyWeather(lat, lon string) (dw DailyWeather, err error) {
+	f, err := c.getForecast("/"+lat+","+lon, &url.Values{
 		"exclude": {"currently,minutely,hourly,alerts,flags"},
 		"units":   {"uk2"},
 	})
