@@ -20,12 +20,12 @@ type ForecastResponse struct {
 type Values struct {
 	CloudBaseAvg                float64   `json:"cloudBaseAvg"`
 	CloudBaseMax                float64   `json:"cloudBaseMax"`
-	CloudBaseMin                int       `json:"cloudBaseMin"`
+	CloudBaseMin                float64   `json:"cloudBaseMin"`
 	CloudCeilingAvg             float64   `json:"cloudCeilingAvg"`
 	CloudCeilingMax             float64   `json:"cloudCeilingMax"`
-	CloudCeilingMin             int       `json:"cloudCeilingMin"`
+	CloudCeilingMin             float64   `json:"cloudCeilingMin"`
 	CloudCoverAvg               float64   `json:"cloudCoverAvg"`
-	CloudCoverMax               int       `json:"cloudCoverMax"`
+	CloudCoverMax               float64   `json:"cloudCoverMax"`
 	CloudCoverMin               float64   `json:"cloudCoverMin"`
 	DewPointAvg                 float64   `json:"dewPointAvg"`
 	DewPointMax                 float64   `json:"dewPointMax"`
@@ -34,56 +34,56 @@ type Values struct {
 	EvapotranspirationMax       float64   `json:"evapotranspirationMax"`
 	EvapotranspirationMin       float64   `json:"evapotranspirationMin"`
 	EvapotranspirationSum       float64   `json:"evapotranspirationSum"`
-	FreezingRainIntensityAvg    int       `json:"freezingRainIntensityAvg"`
-	FreezingRainIntensityMax    int       `json:"freezingRainIntensityMax"`
-	FreezingRainIntensityMin    int       `json:"freezingRainIntensityMin"`
+	FreezingRainIntensityAvg    float64   `json:"freezingRainIntensityAvg"`
+	FreezingRainIntensityMax    float64   `json:"freezingRainIntensityMax"`
+	FreezingRainIntensityMin    float64   `json:"freezingRainIntensityMin"`
 	HumidityAvg                 float64   `json:"humidityAvg"`
 	HumidityMax                 float64   `json:"humidityMax"`
 	HumidityMin                 float64   `json:"humidityMin"`
-	IceAccumulationAvg          int       `json:"iceAccumulationAvg"`
-	IceAccumulationLweAvg       int       `json:"iceAccumulationLweAvg"`
-	IceAccumulationLweMax       int       `json:"iceAccumulationLweMax"`
-	IceAccumulationLweMin       int       `json:"iceAccumulationLweMin"`
-	IceAccumulationMax          int       `json:"iceAccumulationMax"`
-	IceAccumulationMin          int       `json:"iceAccumulationMin"`
-	IceAccumulationSum          int       `json:"iceAccumulationSum"`
+	IceAccumulationAvg          float64   `json:"iceAccumulationAvg"`
+	IceAccumulationLweAvg       float64   `json:"iceAccumulationLweAvg"`
+	IceAccumulationLweMax       float64   `json:"iceAccumulationLweMax"`
+	IceAccumulationLweMin       float64   `json:"iceAccumulationLweMin"`
+	IceAccumulationMax          float64   `json:"iceAccumulationMax"`
+	IceAccumulationMin          float64   `json:"iceAccumulationMin"`
+	IceAccumulationSum          float64   `json:"iceAccumulationSum"`
 	MoonriseTime                time.Time `json:"moonriseTime"`
 	MoonsetTime                 time.Time `json:"moonsetTime"`
-	PrecipitationProbabilityAvg int       `json:"precipitationProbabilityAvg"`
-	PrecipitationProbabilityMax int       `json:"precipitationProbabilityMax"`
-	PrecipitationProbabilityMin int       `json:"precipitationProbabilityMin"`
+	PrecipitationProbabilityAvg float64   `json:"precipitationProbabilityAvg"`
+	PrecipitationProbabilityMax float64   `json:"precipitationProbabilityMax"`
+	PrecipitationProbabilityMin float64   `json:"precipitationProbabilityMin"`
 	PressureSurfaceLevelAvg     float64   `json:"pressureSurfaceLevelAvg"`
 	PressureSurfaceLevelMax     float64   `json:"pressureSurfaceLevelMax"`
 	PressureSurfaceLevelMin     float64   `json:"pressureSurfaceLevelMin"`
 	RainAccumulationAvg         float64   `json:"rainAccumulationAvg"`
 	RainAccumulationLweAvg      float64   `json:"rainAccumulationLweAvg"`
 	RainAccumulationLweMax      float64   `json:"rainAccumulationLweMax"`
-	RainAccumulationLweMin      int       `json:"rainAccumulationLweMin"`
+	RainAccumulationLweMin      float64   `json:"rainAccumulationLweMin"`
 	RainAccumulationMax         float64   `json:"rainAccumulationMax"`
-	RainAccumulationMin         int       `json:"rainAccumulationMin"`
+	RainAccumulationMin         float64   `json:"rainAccumulationMin"`
 	RainAccumulationSum         float64   `json:"rainAccumulationSum"`
 	RainIntensityAvg            float64   `json:"rainIntensityAvg"`
 	RainIntensityMax            float64   `json:"rainIntensityMax"`
-	RainIntensityMin            int       `json:"rainIntensityMin"`
-	SleetAccumulationAvg        int       `json:"sleetAccumulationAvg"`
-	SleetAccumulationLweAvg     int       `json:"sleetAccumulationLweAvg"`
-	SleetAccumulationLweMax     int       `json:"sleetAccumulationLweMax"`
-	SleetAccumulationLweMin     int       `json:"sleetAccumulationLweMin"`
-	SleetAccumulationMax        int       `json:"sleetAccumulationMax"`
-	SleetAccumulationMin        int       `json:"sleetAccumulationMin"`
-	SleetIntensityAvg           int       `json:"sleetIntensityAvg"`
-	SleetIntensityMax           int       `json:"sleetIntensityMax"`
-	SleetIntensityMin           int       `json:"sleetIntensityMin"`
+	RainIntensityMin            float64   `json:"rainIntensityMin"`
+	SleetAccumulationAvg        float64   `json:"sleetAccumulationAvg"`
+	SleetAccumulationLweAvg     float64   `json:"sleetAccumulationLweAvg"`
+	SleetAccumulationLweMax     float64   `json:"sleetAccumulationLweMax"`
+	SleetAccumulationLweMin     float64   `json:"sleetAccumulationLweMin"`
+	SleetAccumulationMax        float64   `json:"sleetAccumulationMax"`
+	SleetAccumulationMin        float64   `json:"sleetAccumulationMin"`
+	SleetIntensityAvg           float64   `json:"sleetIntensityAvg"`
+	SleetIntensityMax           float64   `json:"sleetIntensityMax"`
+	SleetIntensityMin           float64   `json:"sleetIntensityMin"`
 	SnowAccumulationAvg         float64   `json:"snowAccumulationAvg"`
-	SnowAccumulationLweAvg      int       `json:"snowAccumulationLweAvg"`
+	SnowAccumulationLweAvg      float64   `json:"snowAccumulationLweAvg"`
 	SnowAccumulationLweMax      float64   `json:"snowAccumulationLweMax"`
-	SnowAccumulationLweMin      int       `json:"snowAccumulationLweMin"`
+	SnowAccumulationLweMin      float64   `json:"snowAccumulationLweMin"`
 	SnowAccumulationMax         float64   `json:"snowAccumulationMax"`
-	SnowAccumulationMin         int       `json:"snowAccumulationMin"`
+	SnowAccumulationMin         float64   `json:"snowAccumulationMin"`
 	SnowAccumulationSum         float64   `json:"snowAccumulationSum"`
-	SnowIntensityAvg            int       `json:"snowIntensityAvg"`
-	SnowIntensityMax            int       `json:"snowIntensityMax"`
-	SnowIntensityMin            int       `json:"snowIntensityMin"`
+	SnowIntensityAvg            float64   `json:"snowIntensityAvg"`
+	SnowIntensityMax            float64   `json:"snowIntensityMax"`
+	SnowIntensityMin            float64   `json:"snowIntensityMin"`
 	SunriseTime                 time.Time `json:"sunriseTime"`
 	SunsetTime                  time.Time `json:"sunsetTime"`
 	TemperatureApparentAvg      float64   `json:"temperatureApparentAvg"`
@@ -92,17 +92,17 @@ type Values struct {
 	TemperatureAvg              float64   `json:"temperatureAvg"`
 	TemperatureMax              float64   `json:"temperatureMax"`
 	TemperatureMin              float64   `json:"temperatureMin"`
-	UvHealthConcernAvg          int       `json:"uvHealthConcernAvg"`
-	UvHealthConcernMax          int       `json:"uvHealthConcernMax"`
-	UvHealthConcernMin          int       `json:"uvHealthConcernMin"`
-	UvIndexAvg                  int       `json:"uvIndexAvg"`
-	UvIndexMax                  int       `json:"uvIndexMax"`
-	UvIndexMin                  int       `json:"uvIndexMin"`
-	VisibilityAvg               int       `json:"visibilityAvg"`
-	VisibilityMax               int       `json:"visibilityMax"`
-	VisibilityMin               int       `json:"visibilityMin"`
-	WeatherCodeMax              int       `json:"weatherCodeMax"`
-	WeatherCodeMin              int       `json:"weatherCodeMin"`
+	UvHealthConcernAvg          float64   `json:"uvHealthConcernAvg"`
+	UvHealthConcernMax          float64   `json:"uvHealthConcernMax"`
+	UvHealthConcernMin          float64   `json:"uvHealthConcernMin"`
+	UvIndexAvg                  float64   `json:"uvIndexAvg"`
+	UvIndexMax                  float64   `json:"uvIndexMax"`
+	UvIndexMin                  float64   `json:"uvIndexMin"`
+	VisibilityAvg               float64   `json:"visibilityAvg"`
+	VisibilityMax               float64   `json:"visibilityMax"`
+	VisibilityMin               float64   `json:"visibilityMin"`
+	WeatherCodeMax              float64   `json:"weatherCodeMax"`
+	WeatherCodeMin              float64   `json:"weatherCodeMin"`
 	WindDirectionAvg            float64   `json:"windDirectionAvg"`
 	WindGustAvg                 float64   `json:"windGustAvg"`
 	WindGustMax                 float64   `json:"windGustMax"`
