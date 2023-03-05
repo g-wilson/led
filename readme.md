@@ -16,7 +16,7 @@ This project uses dotenv to manage config. Create a `.env` file before running:
 
 ```
 # Weather settings
-DARKSKY_API_KEY=xxxx
+TOMORROWIO_API_KEY=xxxx
 WEATHER_LATITUDE=xxxx
 WEATHER_LONGITUDE=xxxx
 WEATHER_REFRESH=1800

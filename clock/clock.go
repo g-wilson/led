@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/g-wilson/led/pkg/calendar"
-	"github.com/g-wilson/led/pkg/darksky"
+	"github.com/g-wilson/led/pkg/tomorrowio"
 	"github.com/g-wilson/led/pkg/weather"
 
 	"github.com/joho/godotenv"
@@ -50,14 +50,14 @@ func New() (*ClockRenderer, error) {
 	}
 	font.SetScale(1)
 
-	darkskyAPIKey := os.Getenv("DARKSKY_API_KEY")
-	if len(darkskyAPIKey) == 0 {
-		return nil, errors.New("environment variable DARKSKY_API_KEY is required")
+	tomorrowIoAPIKey := os.Getenv("TOMORROWIO_API_KEY")
+	if len(tomorrowIoAPIKey) == 0 {
+		return nil, errors.New("environment variable TOMORROWIO_API_KEY is required")
 	}
 
-	darkskyClient := darksky.New(darkskyAPIKey, nil)
+	tomorrowIoClient := tomorrowio.New(tomorrowIoAPIKey, nil)
 	weatherRefresh, _ := strconv.ParseInt(os.Getenv("WEATHER_REFRESH"), 10, 32)
-	weatherAgent := weather.New(darkskyClient, weather.AgentOptions{
+	weatherAgent := weather.New(tomorrowIoClient, weather.AgentOptions{
 		Refresh:   int(weatherRefresh),
 		Latitude:  os.Getenv("WEATHER_LATITUDE"),
 		Longitude: os.Getenv("WEATHER_LONGITUDE"),
