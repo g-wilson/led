@@ -133,7 +133,7 @@ func (d Values) ToDomain() weather.DayWeather {
 		SunriseTime:             d.SunriseTime,
 		SunsetTime:              d.SunsetTime,
 		Rainy:                   d.PrecipitationProbabilityAvg > 25,
-		Windy:                   d.WindSpeedAvg > 10 || d.WindGustAvg > 20,
+		Windy:                   d.WindSpeedAvg > 3 || d.WindGustAvg > 6,
 		Cloudy:                  d.CloudCoverAvg > 0.6,
 		Humidity:                float32(d.HumidityAvg),
 	}
