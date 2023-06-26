@@ -48,7 +48,7 @@ var events = eventList{
 	},
 	{
 		Name:      "AUT",
-		Timestamp: "2023-06-18T18:00:00.000Z",
+		Timestamp: "2023-07-02T13:00:00.000Z",
 		Image:     f1Image,
 	},
 	{
