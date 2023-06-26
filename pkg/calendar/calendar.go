@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	_ "image/png"
+	"sort"
 	"time"
 )
 
@@ -37,146 +38,33 @@ func (e *Event) Until() time.Duration {
 	return time.Until(startsAt)
 }
 
-var events = []Event{
-	{
-		Name:      "BAH",
-		Timestamp: "2023-03-05T15:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "SAU",
-		Timestamp: "2023-03-19T17:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "AUS",
-		Timestamp: "2023-04-02T05:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "AZE",
-		Timestamp: "2023-04-30T11:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "MIA",
-		Timestamp: "2023-05-07T19:30:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "EMI",
-		Timestamp: "2023-05-21T13:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "MON",
-		Timestamp: "2023-05-28T13:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "ESP",
-		Timestamp: "2023-06-04T13:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "CAN",
-		Timestamp: "2023-06-18T18:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "AUT",
-		Timestamp: "2023-06-18T18:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "GBR",
-		Timestamp: "2023-07-09T14:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "HUN",
-		Timestamp: "2023-07-23T13:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "BEL",
-		Timestamp: "2023-07-30T13:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "NED",
-		Timestamp: "2023-08-27T13:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "ITA",
-		Timestamp: "2023-09-01T13:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "SIN",
-		Timestamp: "2023-09-17T12:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "JAP",
-		Timestamp: "2023-09-24T05:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "QAT",
-		Timestamp: "2023-10-08T14:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "USA",
-		Timestamp: "2023-10-22T19:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "MEX",
-		Timestamp: "2023-10-29T20:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "BRA",
-		Timestamp: "2023-11-05T17:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "LSV",
-		Timestamp: "2023-11-19T04:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "ABU",
-		Timestamp: "2023-11-26T13:00:00.000Z",
-		Image:     f1Image,
-	},
-	{
-		Name:      "XMAS",
-		Timestamp: "2023-12-25T00:00:00.000Z",
-		Image:     xmasImage,
-	},
-	{
-		Name:      "2024",
-		Timestamp: "2024-01-0100:00:00.000Z",
-		Image:     xmasImage,
-	},
-	{
-		Name:      "GEORGE",
-		Timestamp: "2023-07-1100:00:00.000+01:00",
-		Image:     nil,
-	},
-	{
-		Name:      "ELLIE",
-		Timestamp: "2023-09-18T00:00:00.000+01:00",
-		Image:     nil,
-	},
+type eventList []Event
+
+func (s eventList) Len() int {
+	return len(s)
 }
 
+func (s eventList) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s eventList) Less(i, j int) bool {
+	iStartsAt, _ := time.Parse(time.RFC3339, s[i].Timestamp)
+	jStartsAt, _ := time.Parse(time.RFC3339, s[j].Timestamp)
+
+	return iStartsAt.Before(jStartsAt)
+}
+
+var sortedEvents = (func() eventList {
+	e := append(eventList{}, events...)
+
+	sort.Sort(e)
+
+	return e
+})()
+
 func GetNextEvent() *Event {
-	for _, r := range events {
+	for _, r := range sortedEvents {
 		until := r.Until()
 
 		if until.Seconds() < 0 {
