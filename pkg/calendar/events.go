@@ -131,14 +131,4 @@ var events = eventList{
 		Timestamp: "2025-01-0100:00:00.000Z",
 		Image:     xmasImage,
 	},
-	{
-		Name:      "GEORGE",
-		Timestamp: "2024-07-1100:00:00.000+01:00",
-		Image:     nil,
-	},
-	{
-		Name:      "ELLIE",
-		Timestamp: "2024-09-18T00:00:00.000+01:00",
-		Image:     nil,
-	},
 }
