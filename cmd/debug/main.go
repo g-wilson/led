@@ -12,7 +12,7 @@ import (
 	"strconv"
 
 	"github.com/g-wilson/led/clock"
-	"github.com/g-wilson/led/pkg/framestreamer"
+	"github.com/g-wilson/led/internal/framestreamer"
 
 	"github.com/joho/godotenv"
 )

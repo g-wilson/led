@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/g-wilson/led/pkg/calendar"
-	"github.com/g-wilson/led/pkg/tomorrowio"
-	"github.com/g-wilson/led/pkg/weather"
+	"github.com/g-wilson/led/internal/calendar"
+	"github.com/g-wilson/led/internal/tomorrowio"
+	"github.com/g-wilson/led/internal/weather"
 
 	"github.com/joho/godotenv"
 	"github.com/toelsiba/fopix"

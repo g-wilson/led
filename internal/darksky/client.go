@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/g-wilson/led/pkg/weather"
+	"github.com/g-wilson/led/internal/weather"
 )
 
 type Forecast struct {

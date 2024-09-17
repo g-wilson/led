@@ -11,7 +11,7 @@ import (
 	"strconv"
 
 	"github.com/g-wilson/led/clock"
-	"github.com/g-wilson/led/pkg/framestreamer"
+	"github.com/g-wilson/led/internal/framestreamer"
 
 	"github.com/joho/godotenv"
 	rgbmatrix "github.com/mcuadros/go-rpi-rgb-led-matrix"
@@ -65,7 +65,7 @@ func main() {
 			case err := <-fs.E:
 				log.Fatalln(err)
 			case frame := <-fs.C:
-				draw.Draw(c, c.Bounds(), frame, image.ZP, draw.Src)
+				draw.Draw(c, c.Bounds(), frame, image.Point{}, draw.Src)
 				c.Render()
 			}
 		}

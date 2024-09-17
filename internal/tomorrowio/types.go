@@ -3,7 +3,7 @@ package tomorrowio
 import (
 	"time"
 
-	"github.com/g-wilson/led/pkg/weather"
+	"github.com/g-wilson/led/internal/weather"
 )
 
 type ErrorResponse struct {
