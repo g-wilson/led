@@ -6,7 +6,7 @@ require (
 	github.com/joho/godotenv v1.3.0
 	github.com/mcuadros/go-rpi-rgb-led-matrix v0.0.0-20180401002551-b26063b3169a
 	github.com/toelsiba/fopix v0.0.0-20210114151512-ed880dcce00d
-	golang.org/x/image v0.18.0
+	golang.org/x/image v0.20.0
 )
 
 require (
