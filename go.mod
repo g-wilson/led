@@ -1,6 +1,6 @@
 module github.com/g-wilson/led
 
-go 1.17
+go 1.23
 
 require (
 	github.com/joho/godotenv v1.3.0
