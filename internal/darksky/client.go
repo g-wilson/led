@@ -99,14 +99,14 @@ type DayWeather struct {
 
 func (d DayWeather) ToDomain() weather.DayWeather {
 	return weather.DayWeather{
-		ApparentTemperatureHigh: d.ApparentTemperatureHigh,
-		ApparentTemperatureLow:  d.ApparentTemperatureLow,
-		SunriseTime:             time.Unix(d.SunriseTime, 0),
-		SunsetTime:              time.Unix(d.SunsetTime, 0),
-		Rainy:                   d.PrecipProbability > 0.25,
-		Windy:                   d.WindSpeed > 10 || d.WindGust > 20,
-		Cloudy:                  d.CloudCover > 0.6,
-		Humidity:                d.Humidity,
+		TemperatureHigh: d.TemperatureHigh,
+		TemperatureLow:  d.TemperatureLow,
+		SunriseTime:     time.Unix(d.SunriseTime, 0),
+		SunsetTime:      time.Unix(d.SunsetTime, 0),
+		Rainy:           d.PrecipProbability > 0.25,
+		Windy:           d.WindSpeed > 10 || d.WindGust > 20,
+		Cloudy:          d.CloudCover > 0.6,
+		Humidity:        d.Humidity,
 	}
 }
 

@@ -128,13 +128,13 @@ type Location struct {
 
 func (d Values) ToDomain() weather.DayWeather {
 	return weather.DayWeather{
-		ApparentTemperatureHigh: float32(d.TemperatureApparentMax),
-		ApparentTemperatureLow:  float32(d.TemperatureApparentMin),
-		SunriseTime:             d.SunriseTime,
-		SunsetTime:              d.SunsetTime,
-		Rainy:                   d.PrecipitationProbabilityAvg > 25,
-		Windy:                   d.WindSpeedAvg > 6 || d.WindGustAvg > 12,
-		Cloudy:                  d.CloudCoverAvg > 0.6,
-		Humidity:                float32(d.HumidityAvg),
+		TemperatureHigh: float32(d.TemperatureMax),
+		TemperatureLow:  float32(d.TemperatureMin),
+		SunriseTime:     d.SunriseTime,
+		SunsetTime:      d.SunsetTime,
+		Rainy:           d.PrecipitationProbabilityAvg > 25,
+		Windy:           d.WindSpeedAvg > 6 || d.WindGustAvg > 12,
+		Cloudy:          d.CloudCoverAvg > 0.6,
+		Humidity:        float32(d.HumidityAvg),
 	}
 }

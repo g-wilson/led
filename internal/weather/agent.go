@@ -7,14 +7,14 @@ import (
 )
 
 type DayWeather struct {
-	ApparentTemperatureHigh float32
-	ApparentTemperatureLow  float32
-	SunriseTime             time.Time
-	SunsetTime              time.Time
-	Rainy                   bool
-	Windy                   bool
-	Cloudy                  bool
-	Humidity                float32
+	TemperatureHigh float32
+	TemperatureLow  float32
+	SunriseTime     time.Time
+	SunsetTime      time.Time
+	Rainy           bool
+	Windy           bool
+	Cloudy          bool
+	Humidity        float32
 }
 
 type TwoDayWeather struct {

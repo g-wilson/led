@@ -89,11 +89,15 @@ func (r *ClockRenderer) DrawFrame(bounds image.Rectangle) (*image.RGBA, error) {
 	c := image.NewRGBA(bounds)
 	draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
 
+	// if it's overnight, don't render anything
+	if r.isCurrentlyOvernight() {
+		return c, nil
+	}
+
 	// all pages - clock
 	r.addText(c, image.Point{X: 0, Y: -1}, r.getTimeString(), color.RGBA{200, 200, 200, 255})
 
-	// Countdown timer
-
+	// render the current page
 	switch r.pages[r.currentPage] {
 	// Page 1: Today's weather
 	case "today":
@@ -125,7 +129,8 @@ func (r *ClockRenderer) DrawFrame(bounds image.Rectangle) (*image.RGBA, error) {
 			r.addText(c, image.Point{X: halfway, Y: 15}, event.Name, color.RGBA{60, 60, 215, 255})
 			r.addText(c, image.Point{X: 10, Y: 22}, formatDuration(event.Until()), color.RGBA{215, 0, 0, 255})
 		}
-
+	default:
+		// do nothing
 	}
 
 	return c, nil
@@ -158,8 +163,8 @@ func (r *ClockRenderer) startPageIterator() {
 }
 
 func (r *ClockRenderer) renderWeather(c *image.RGBA, w weather.DayWeather) {
-	r.addText(c, image.Point{X: 0, Y: 17}, fmt.Sprintf("%02.foC", w.ApparentTemperatureLow), color.RGBA{80, 80, 255, 255})
-	r.addText(c, image.Point{X: 17, Y: 17}, fmt.Sprintf("%02.foC", w.ApparentTemperatureHigh), color.RGBA{255, 150, 0, 255})
+	r.addText(c, image.Point{X: 0, Y: 17}, fmt.Sprintf("%02.foC", w.TemperatureLow), color.RGBA{80, 80, 255, 255})
+	r.addText(c, image.Point{X: 17, Y: 17}, fmt.Sprintf("%02.foC", w.TemperatureHigh), color.RGBA{255, 150, 0, 255})
 
 	summaryStart := 38
 	if w.Cloudy {
@@ -200,4 +205,13 @@ func formatDuration(u time.Duration) string {
 	}
 
 	return fmt.Sprintf("%02dd %02dh %02dm", d, h, m)
+}
+
+func (r *ClockRenderer) isCurrentlyOvernight() bool {
+	now := time.Now()
+	year, month, day := now.Date()
+	today8pm := time.Date(year, month, day, 20, 0, 0, 0, r.location)
+	today6am := time.Date(year, month, day, 6, 0, 0, 0, r.location)
+
+	return today8pm.Before(now) || today6am.After(now)
 }
