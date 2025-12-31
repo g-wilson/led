@@ -27,5 +27,5 @@ var events = eventList{
 	{"UAE", "2025-12-07T00:00:00Z", f1Image}, // Abu Dhabi Grand Prix
 
 	{"XMAS", "2025-12-25T00:00:00.000Z", xmasImage},
-	{"2026", "2026-01-0100:00:00.000Z", xmasImage},
+	{"2026", "2026-01-01T00:00:00.000Z", xmasImage},
 }
