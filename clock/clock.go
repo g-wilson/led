@@ -102,13 +102,13 @@ func (r *ClockRenderer) DrawFrame(bounds image.Rectangle) (*image.RGBA, error) {
 	// Page 1: Today's weather
 	case "today":
 		w := r.weather.GetToday()
-		r.addText(c, image.Point{X: 0, Y: 10}, "Today", color.RGBA{215, 0, 88, 255})
+		r.addText(c, image.Point{X: 0, Y: 8}, "Today", color.RGBA{215, 0, 88, 255})
 		r.renderWeather(c, w)
 
 	// Page 2: Tomorrow's weather
 	case "tomorrow":
 		w := r.weather.GetTomorrow()
-		r.addText(c, image.Point{X: 0, Y: 10}, "Tomorrow", color.RGBA{215, 0, 88, 255})
+		r.addText(c, image.Point{X: 0, Y: 8}, "Tomorrow", color.RGBA{215, 0, 88, 255})
 		r.renderWeather(c, w)
 
 	// Page 3: Sunset + Sunrise
@@ -163,25 +163,29 @@ func (r *ClockRenderer) startPageIterator() {
 }
 
 func (r *ClockRenderer) renderWeather(c *image.RGBA, w weather.DayWeather) {
-	r.addText(c, image.Point{X: 0, Y: 17}, fmt.Sprintf("%02.foC", w.TemperatureLow), color.RGBA{80, 80, 255, 255})
-	r.addText(c, image.Point{X: 17, Y: 17}, fmt.Sprintf("%02.foC", w.TemperatureHigh), color.RGBA{255, 150, 0, 255})
+	yOffset := 15
+	summaryStart := 36
 
-	summaryStart := 38
+	r.addText(c, image.Point{X: 0, Y: yOffset}, fmt.Sprintf("%02.foC", w.TemperatureLow), color.RGBA{80, 80, 255, 255})
+	r.addText(c, image.Point{X: 17, Y: yOffset}, fmt.Sprintf("%02.foC", w.TemperatureHigh), color.RGBA{255, 150, 0, 255})
+
+	// Underneath temperatures, always shows
 	if w.Cloudy {
-		r.addText(c, image.Point{X: summaryStart, Y: 17}, "C", color.RGBA{179, 161, 136, 255})
+		r.addText(c, image.Point{X: 0, Y: yOffset + 7}, "Cloudy", color.RGBA{179, 161, 136, 255})
 	} else {
-		r.addText(c, image.Point{X: summaryStart, Y: 17}, "S", color.RGBA{255, 213, 0, 255})
+		r.addText(c, image.Point{X: 0, Y: yOffset + 7}, "Sunny", color.RGBA{255, 213, 0, 255})
 	}
+
+	// To the right, conditionally shows
 	if w.Rainy {
-		r.addText(c, image.Point{X: summaryStart + 4, Y: 17}, "R", color.RGBA{0, 113, 237, 255})
-	} else {
-		r.addText(c, image.Point{X: summaryStart + 4, Y: 17}, "D", color.RGBA{179, 161, 136, 255})
+		r.addText(c, image.Point{X: summaryStart, Y: yOffset}, "Rain", color.RGBA{0, 113, 237, 255})
 	}
 	if w.Windy {
-		r.addText(c, image.Point{X: summaryStart + 8, Y: 17}, "W", color.RGBA{0, 247, 255, 255})
+		r.addText(c, image.Point{X: summaryStart, Y: yOffset + 7}, "Windy", color.RGBA{0, 247, 255, 255})
 	}
 
-	r.addText(c, image.Point{X: summaryStart + 15, Y: 17}, fmt.Sprintf("H%02.f", (w.Humidity*100)), color.RGBA{230, 77, 0, 255})
+	// Humidity, hidden for now
+	// r.addText(c, image.Point{X: summaryStart + 15, Y: yOffset}, fmt.Sprintf("H%02.f", (w.Humidity*100)), color.RGBA{230, 77, 0, 255})
 }
 
 func formatDuration(u time.Duration) string {
