@@ -177,7 +177,9 @@ func (r *ClockRenderer) renderWeather(c *image.RGBA, w weather.DayWeather) {
 	}
 
 	// To the right, conditionally shows
-	if w.Rainy {
+	if w.Snowy {
+		r.addText(c, image.Point{X: summaryStart, Y: yOffset}, "Snow", color.RGBA{255, 255, 255, 255})
+	} else if w.Rainy {
 		r.addText(c, image.Point{X: summaryStart, Y: yOffset}, "Rain", color.RGBA{0, 113, 237, 255})
 	}
 	if w.Windy {

@@ -14,6 +14,7 @@ type DayWeather struct {
 	Rainy           bool
 	Windy           bool
 	Cloudy          bool
+	Snowy           bool
 	Humidity        float32
 }
 

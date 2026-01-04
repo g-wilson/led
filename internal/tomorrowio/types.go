@@ -135,6 +135,7 @@ func (d Values) ToDomain() weather.DayWeather {
 		Rainy:           d.PrecipitationProbabilityAvg > 25,
 		Windy:           d.WindSpeedAvg > 6 || d.WindGustAvg > 12,
 		Cloudy:          d.CloudCoverAvg > 0.6,
+		Snowy:           d.SnowIntensityMax > 1.0,
 		Humidity:        float32(d.HumidityAvg),
 	}
 }
