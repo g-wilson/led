@@ -61,11 +61,12 @@ func main() {
 		Renderer:    clockApp,
 	})
 
-	// Start framestreamer
+	// Start framestreamer - calls the clock app to render frames at the given framerate
 	go fs.Start()
 	defer fs.Stop()
 
-	// Frame receiver goroutine - sends frames to renderer for main thread processing
+	// Frame receiver goroutine - receives frames from the framestreamer
+	// then sends frames to renderer for main thread processing
 	go func() {
 		for {
 			select {

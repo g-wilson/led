@@ -45,7 +45,7 @@ type Renderer struct {
 	vao          uint32
 	vbo          uint32
 	ebo          uint32
-	frameChan    chan image.Image
+	frameChan    chan *image.RGBA
 }
 
 // New creates and initializes a new window renderer.
@@ -61,7 +61,7 @@ func New(ledRows, ledCols int) (*Renderer, error) {
 		windowHeight: 600,
 		ledRows:      ledRows,
 		ledCols:      ledCols,
-		frameChan:    make(chan image.Image, 1), // Buffered channel to avoid blocking
+		frameChan:    make(chan *image.RGBA, 1), // Buffered channel to avoid blocking
 	}
 
 	// Configure GLFW window hints
@@ -112,7 +112,7 @@ func (r *Renderer) Cleanup() {
 // SendFrame sends a frame to the renderer for display.
 // This is safe to call from any goroutine.
 // If a frame is already pending, the new frame will be dropped (non-blocking).
-func (r *Renderer) SendFrame(frame image.Image) {
+func (r *Renderer) SendFrame(frame *image.RGBA) {
 	select {
 	case r.frameChan <- frame:
 	default:
@@ -144,23 +144,9 @@ func (r *Renderer) Run() {
 }
 
 // updateTexture updates the texture with a new frame (must be called from main thread)
-func (r *Renderer) updateTexture(frame image.Image) {
-	// Convert image to RGBA if needed
-	rgba, ok := frame.(*image.RGBA)
-	if !ok {
-		// Convert to RGBA
-		bounds := frame.Bounds()
-		rgba = image.NewRGBA(bounds)
-		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-			for x := bounds.Min.X; x < bounds.Max.X; x++ {
-				rgba.Set(x, y, frame.At(x, y))
-			}
-		}
-	}
-
-	// Upload texture data
+func (r *Renderer) updateTexture(frame *image.RGBA) {
 	gl.BindTexture(gl.TEXTURE_2D, r.texture)
-	gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, int32(r.ledCols), int32(r.ledRows), gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(rgba.Pix))
+	gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, int32(r.ledCols), int32(r.ledRows), gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(frame.Pix))
 	gl.BindTexture(gl.TEXTURE_2D, 0)
 }
 
