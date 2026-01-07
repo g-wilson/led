@@ -35,17 +35,19 @@ void main() {
 
 // Renderer manages the native window and OpenGL rendering state
 type Renderer struct {
-	window       *glfw.Window
-	windowWidth  int
-	windowHeight int
-	ledRows      int
-	ledCols      int
-	texture      uint32
-	shaderProg   uint32
-	vao          uint32
-	vbo          uint32
-	ebo          uint32
-	frameChan    chan *image.RGBA
+	window           *glfw.Window
+	windowWidth      int
+	windowHeight     int
+	ledRows          int
+	ledCols          int
+	texture          uint32
+	shaderProg       uint32
+	vao              uint32
+	vbo              uint32
+	ebo              uint32
+	frameChan        chan *image.RGBA
+	projectionMatrix [16]float32
+	projectionDirty  bool
 }
 
 // New creates and initializes a new window renderer.
@@ -57,11 +59,12 @@ func New(title string, ledRows, ledCols int) (*Renderer, error) {
 	runtime.LockOSThread()
 
 	r := &Renderer{
-		windowWidth:  800,
-		windowHeight: 600,
-		ledRows:      ledRows,
-		ledCols:      ledCols,
-		frameChan:    make(chan *image.RGBA, 1), // Buffered channel to avoid blocking
+		windowWidth:     800,
+		windowHeight:    600,
+		ledRows:         ledRows,
+		ledCols:         ledCols,
+		frameChan:       make(chan *image.RGBA, 1), // Buffered channel to avoid blocking
+		projectionDirty: true,                      // Initial projection calculation needed
 	}
 
 	// Configure GLFW window hints
@@ -184,6 +187,11 @@ func (r *Renderer) setupOpenGL() error {
 	gl.DeleteShader(vertexShader)
 	gl.DeleteShader(fragmentShader)
 
+	// Set texture uniform once (it never changes)
+	gl.UseProgram(r.shaderProg)
+	gl.Uniform1i(gl.GetUniformLocation(r.shaderProg, gl.Str("texture1\x00")), 0)
+	gl.UseProgram(0)
+
 	// Set up vertex data for fullscreen quad
 	vertices := []float32{
 		// positions   // texCoords (Y flipped: OpenGL has 0,0 at bottom-left, Go images have 0,0 at top-left)
@@ -278,13 +286,19 @@ func (r *Renderer) render() {
 	// Use shader program
 	gl.UseProgram(r.shaderProg)
 
-	// Calculate aspect ratio and projection matrix
-	r.updateProjectionMatrix()
+	// Only recalculate projection matrix when window is resized
+	if r.projectionDirty {
+		r.updateProjectionMatrix()
+		r.projectionDirty = false
+	}
 
-	// Bind texture
+	// Set cached projection matrix
+	projLoc := gl.GetUniformLocation(r.shaderProg, gl.Str("projection\x00"))
+	gl.UniformMatrix4fv(projLoc, 1, false, &r.projectionMatrix[0])
+
+	// Bind texture (uniform already set during initialization)
 	gl.ActiveTexture(gl.TEXTURE0)
 	gl.BindTexture(gl.TEXTURE_2D, r.texture)
-	gl.Uniform1i(gl.GetUniformLocation(r.shaderProg, gl.Str("texture1\x00")), 0)
 
 	// Bind VAO and draw
 	gl.BindVertexArray(r.vao)
@@ -331,17 +345,13 @@ func (r *Renderer) updateProjectionMatrix() {
 		scaleY = scaleX * (1.0 / ledAspect) * float32(r.windowWidth) / float32(r.windowHeight)
 	}
 
-	// Create orthographic projection matrix
-	projection := [16]float32{
+	// Store orthographic projection matrix in struct
+	r.projectionMatrix = [16]float32{
 		scaleX, 0, 0, 0,
 		0, scaleY, 0, 0,
 		0, 0, 1, 0,
 		0, 0, 0, 1,
 	}
-
-	// Set projection matrix uniform
-	projLoc := gl.GetUniformLocation(r.shaderProg, gl.Str("projection\x00"))
-	gl.UniformMatrix4fv(projLoc, 1, false, &projection[0])
 
 	// Set viewport
 	gl.Viewport(0, 0, int32(r.windowWidth), int32(r.windowHeight))
@@ -350,7 +360,7 @@ func (r *Renderer) updateProjectionMatrix() {
 func (r *Renderer) framebufferSizeCallback(_ *glfw.Window, width, height int) {
 	r.windowWidth = width
 	r.windowHeight = height
-	r.updateProjectionMatrix()
+	r.projectionDirty = true
 }
 
 func (r *Renderer) cleanupOpenGL() {
