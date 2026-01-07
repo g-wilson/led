@@ -45,7 +45,8 @@ type Renderer struct {
 	vao              uint32
 	vbo              uint32
 	ebo              uint32
-	frameChan        chan *image.RGBA
+	frameChan        <-chan *image.RGBA // receive-only channel from framestreamer frames
+	errorChan        <-chan error       // receive-only channel for framestreamer errors
 	projectionMatrix [16]float32
 	projectionDirty  bool
 }
@@ -53,7 +54,8 @@ type Renderer struct {
 // New creates and initializes a new window renderer.
 // IMPORTANT: Must be called from the main goroutine with runtime.LockOSThread() already called.
 // This is required for GLFW/OpenGL to work correctly on macOS.
-func New(title string, ledRows, ledCols int) (*Renderer, error) {
+// The frameChan and errorChan should be connected to a framestreamer instance.
+func New(title string, ledRows, ledCols int, frameChan <-chan *image.RGBA, errorChan <-chan error) (*Renderer, error) {
 	// Ensure the current goroutine is locked to an OS thread
 	// This is a best-effort check - the caller should have called runtime.LockOSThread() in main()
 	runtime.LockOSThread()
@@ -63,8 +65,9 @@ func New(title string, ledRows, ledCols int) (*Renderer, error) {
 		windowHeight:    600,
 		ledRows:         ledRows,
 		ledCols:         ledCols,
-		frameChan:       make(chan *image.RGBA, 1), // Buffered channel to avoid blocking
-		projectionDirty: true,                      // Initial projection calculation needed
+		frameChan:       frameChan,
+		errorChan:       errorChan,
+		projectionDirty: true, // Initial projection calculation needed
 	}
 
 	// Configure GLFW window hints
@@ -112,30 +115,25 @@ func (r *Renderer) Cleanup() {
 	}
 }
 
-// SendFrame sends a frame to the renderer for display.
-// This is safe to call from any goroutine.
-// If a frame is already pending, the new frame will be dropped (non-blocking).
-func (r *Renderer) SendFrame(frame *image.RGBA) {
-	select {
-	case r.frameChan <- frame:
-	default:
-		// Skip frame if channel is full (we're rendering faster than frames arrive)
-	}
-}
-
 // Run executes the main render loop until the window is closed.
 // All OpenGL/GLFW operations happen on the main thread (required on macOS).
-func (r *Renderer) Run() {
+// Returns an error if the framestreamer encounters an error.
+func (r *Renderer) Run() error {
 	for !r.window.ShouldClose() {
 		// Poll events (must be on main thread on macOS)
 		glfw.PollEvents()
 
-		// Process any pending frames from the channel (non-blocking)
+		// Process channels (non-blocking)
 		select {
+		case err := <-r.errorChan:
+			// Error from framestreamer
+			return fmt.Errorf("renderer received error expecting frame: %w", err)
 		case frame := <-r.frameChan:
-			r.updateTexture(frame)
+			if frame != nil {
+				r.updateTexture(frame)
+			}
 		default:
-			// No new frame, continue with rendering
+			// No new frame or error, continue with rendering
 		}
 
 		// Render (must be on main thread on macOS)
@@ -144,6 +142,7 @@ func (r *Renderer) Run() {
 		// Swap buffers (must be on main thread on macOS)
 		r.window.SwapBuffers()
 	}
+	return nil
 }
 
 // updateTexture updates the texture with a new frame (must be called from main thread)

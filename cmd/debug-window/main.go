@@ -38,13 +38,6 @@ func main() {
 	}
 	defer glfw.Terminate()
 
-	// Create window renderer
-	renderer, err := windowrenderer.New("LED Matrix Debug", ledRows, ledCols)
-	if err != nil {
-		log.Fatalln("failed to create window renderer:", err)
-	}
-	defer renderer.Cleanup()
-
 	// Create clock renderer
 	clockApp, err := clock.New()
 	if err != nil {
@@ -61,27 +54,20 @@ func main() {
 		Renderer:    clockApp,
 	})
 
+	// Create window renderer with direct channel access to framestreamer
+	renderer, err := windowrenderer.New("LED Matrix Debug", ledRows, ledCols, fs.C, fs.E)
+	if err != nil {
+		log.Fatalln("failed to create window renderer:", err)
+	}
+	defer renderer.Cleanup()
+
 	// Start framestreamer - calls the clock app to render frames at the given framerate
 	go fs.Start()
 	defer fs.Stop()
 
-	// Frame receiver goroutine - receives frames from the framestreamer
-	// then sends frames to renderer for main thread processing
-	go func() {
-		for {
-			select {
-			case err := <-fs.E:
-				if err != nil {
-					log.Fatalln("framestreamer error:", err)
-				}
-			case frame := <-fs.C:
-				if frame != nil {
-					renderer.SendFrame(frame)
-				}
-			}
-		}
-	}()
-
 	// Main render loop - processes frames on main thread
-	renderer.Run()
+	// No intermediate goroutine needed - renderer reads directly from framestreamer channels
+	if err := renderer.Run(); err != nil {
+		log.Fatalln("renderer error:", err)
+	}
 }
