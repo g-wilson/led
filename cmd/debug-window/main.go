@@ -39,7 +39,7 @@ func main() {
 	defer glfw.Terminate()
 
 	// Create window renderer
-	renderer, err := windowrenderer.New(ledRows, ledCols)
+	renderer, err := windowrenderer.New("LED Matrix Debug", ledRows, ledCols)
 	if err != nil {
 		log.Fatalln("failed to create window renderer:", err)
 	}

@@ -51,7 +51,7 @@ type Renderer struct {
 // New creates and initializes a new window renderer.
 // IMPORTANT: Must be called from the main goroutine with runtime.LockOSThread() already called.
 // This is required for GLFW/OpenGL to work correctly on macOS.
-func New(ledRows, ledCols int) (*Renderer, error) {
+func New(title string, ledRows, ledCols int) (*Renderer, error) {
 	// Ensure the current goroutine is locked to an OS thread
 	// This is a best-effort check - the caller should have called runtime.LockOSThread() in main()
 	runtime.LockOSThread()
@@ -72,7 +72,7 @@ func New(ledRows, ledCols int) (*Renderer, error) {
 	glfw.WindowHint(glfw.Resizable, glfw.True)
 
 	// Create window
-	win, err := glfw.CreateWindow(r.windowWidth, r.windowHeight, "LED Matrix Debug", nil, nil)
+	win, err := glfw.CreateWindow(r.windowWidth, r.windowHeight, title, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create window: %w", err)
 	}
@@ -245,8 +245,8 @@ func (r *Renderer) setupOpenGL() error {
 
 	gl.BindTexture(gl.TEXTURE_2D, 0)
 
-	// Set clear color
-	gl.ClearColor(0.0, 0.0, 0.0, 1.0)
+	// Set clear color to dark grey to distinguish from LED matrix black background
+	gl.ClearColor(0.15, 0.15, 0.15, 1.0)
 
 	return nil
 }
@@ -298,20 +298,37 @@ func (r *Renderer) updateProjectionMatrix() {
 	r.windowWidth = w
 	r.windowHeight = h
 
+	// Minimum border in pixels
+	const minBorder = 20.0
+
+	// Calculate effective drawable area (excluding minimum borders)
+	effectiveWidth := float32(r.windowWidth) - 2*minBorder
+	effectiveHeight := float32(r.windowHeight) - 2*minBorder
+
+	// Ensure we have positive dimensions
+	if effectiveWidth <= 0 {
+		effectiveWidth = float32(r.windowWidth)
+	}
+	if effectiveHeight <= 0 {
+		effectiveHeight = float32(r.windowHeight)
+	}
+
 	// Calculate aspect ratios
-	windowAspect := float32(r.windowWidth) / float32(r.windowHeight)
+	windowAspect := effectiveWidth / effectiveHeight
 	ledAspect := float32(r.ledCols) / float32(r.ledRows)
 
-	// Calculate scale to fill window while maintaining aspect ratio
+	// Calculate scale to fit within effective area while maintaining aspect ratio
 	var scaleX, scaleY float32
 	if windowAspect > ledAspect {
 		// Window is wider - scale based on height
-		scaleY = 1.0
-		scaleX = ledAspect / windowAspect
+		// The LED frame height should fit within effectiveHeight
+		scaleY = effectiveHeight / float32(r.windowHeight)
+		scaleX = scaleY * ledAspect * float32(r.windowHeight) / float32(r.windowWidth)
 	} else {
 		// Window is taller - scale based on width
-		scaleX = 1.0
-		scaleY = windowAspect / ledAspect
+		// The LED frame width should fit within effectiveWidth
+		scaleX = effectiveWidth / float32(r.windowWidth)
+		scaleY = scaleX * (1.0 / ledAspect) * float32(r.windowWidth) / float32(r.windowHeight)
 	}
 
 	// Create orthographic projection matrix
