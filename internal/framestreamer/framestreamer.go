@@ -79,6 +79,10 @@ func (fs *FrameStreamer) Start() {
 	}
 	fs.started = true
 
+	// Clear buffer to black before initial rendering
+	buf := fs.buffers[fs.current]
+	draw.Draw(buf, buf.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
+
 	// ticker used instead of sleep:
 	// tickers drop ticks for slow recievers i.e. if recieving on the
 	// FS channel is blocked, ticks slow and the renderer is not called un-necessarily
@@ -87,10 +91,8 @@ func (fs *FrameStreamer) Start() {
 		fs.current = (fs.current + 1) % bufferCount
 		buf := fs.buffers[fs.current]
 
-		// Clear buffer to black before rendering
-		draw.Draw(buf, buf.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
-
 		// Renderer draws into the provided buffer
+		// Note that we do not clear the image data in the buffer here
 		err := fs.renderer.DrawFrame(buf)
 		if err != nil {
 			fs.E <- err
