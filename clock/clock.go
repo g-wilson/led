@@ -31,6 +31,7 @@ type ClockRenderer struct {
 	pages        []string
 	currentPage  int
 	pageInterval time.Duration
+	debug        bool
 }
 
 func New() (*ClockRenderer, error) {
@@ -78,6 +79,7 @@ func New() (*ClockRenderer, error) {
 		pages:        []string{"today", "tomorrow", "daylight", "countdown"},
 		currentPage:  0,
 		pageInterval: 5 * time.Second,
+		debug:        os.Getenv("DEBUG") == "true",
 	}
 
 	r.startPageIterator()
@@ -85,14 +87,16 @@ func New() (*ClockRenderer, error) {
 	return r, nil
 }
 
-func (r *ClockRenderer) DrawFrame(bounds image.Rectangle) (*image.RGBA, error) {
-	c := image.NewRGBA(bounds)
-	draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
-
-	// if it's overnight, don't render anything
-	if r.isCurrentlyOvernight() {
-		return c, nil
+// DrawFrame renders the current clock display into the provided target buffer.
+// The buffer is expected to be pre-cleared by the caller (FrameStreamer).
+func (r *ClockRenderer) DrawFrame(c *image.RGBA) error {
+	// if it's overnight, don't render anything (buffer is already cleared to black)
+	if r.isCurrentlyOvernight() && !r.debug {
+		return nil
 	}
+
+	// clear the image to black as a background for the page
+	draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
 
 	// all pages - clock
 	r.addText(c, image.Point{X: 0, Y: -1}, r.getTimeString(), color.RGBA{200, 200, 200, 255})
@@ -133,7 +137,7 @@ func (r *ClockRenderer) DrawFrame(bounds image.Rectangle) (*image.RGBA, error) {
 		// do nothing
 	}
 
-	return c, nil
+	return nil
 }
 
 func (r *ClockRenderer) addText(c *image.RGBA, pos image.Point, text string, col color.RGBA) {
@@ -214,7 +218,7 @@ func formatDuration(u time.Duration) string {
 }
 
 func (r *ClockRenderer) isCurrentlyOvernight() bool {
-	now := time.Now()
+	now := time.Now().In(r.location)
 	year, month, day := now.Date()
 	today8pm := time.Date(year, month, day, 20, 0, 0, 0, r.location)
 	today6am := time.Date(year, month, day, 6, 0, 0, 0, r.location)

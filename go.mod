@@ -3,6 +3,8 @@ module github.com/g-wilson/led
 go 1.23
 
 require (
+	github.com/go-gl/gl v0.0.0-20231021071112-07e5d0ea2e71
+	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20250301202403-da16c1255728
 	github.com/joho/godotenv v1.3.0
 	github.com/mcuadros/go-rpi-rgb-led-matrix v0.0.0-20180401002551-b26063b3169a
 	github.com/toelsiba/fopix v0.0.0-20210114151512-ed880dcce00d

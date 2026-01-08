@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"image"
-	"image/color"
-	"image/draw"
 	"image/png"
 	"log"
 	"os"
@@ -28,12 +26,10 @@ func main() {
 	rows, _ := strconv.ParseInt(os.Getenv("LED_ROWS"), 10, 32)
 	cols, _ := strconv.ParseInt(os.Getenv("LED_COLS"), 10, 32)
 
-	c := image.NewRGBA(image.Rectangle{
+	bounds := image.Rectangle{
 		Min: image.Point{X: 0, Y: 0},
 		Max: image.Point{X: int(cols), Y: int(rows)},
-	})
-
-	draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
+	}
 
 	clockApp, err := clock.New()
 	if err != nil {
@@ -41,7 +37,7 @@ func main() {
 	}
 
 	fs := framestreamer.New(framestreamer.Params{
-		Bounds:      c.Bounds(),
+		Bounds:      bounds,
 		FrametimeMs: framestreamer.OneFPS,
 		Renderer:    clockApp,
 	})
@@ -52,8 +48,7 @@ func main() {
 			case err := <-fs.E:
 				log.Fatalln(err)
 			case frame := <-fs.C:
-				draw.Draw(c, c.Bounds(), frame, image.Point{}, draw.Src)
-				saveImage("output.png", c)
+				saveImage("output.png", frame)
 			}
 		}
 	}()
