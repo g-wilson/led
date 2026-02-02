@@ -3,6 +3,7 @@ package weather
 import (
 	"fmt"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -31,6 +32,7 @@ type Agent struct {
 	client  DayWeatherProvider
 	options AgentOptions
 
+	mu           sync.RWMutex
 	todayData    DayWeather
 	tomorrowData DayWeather
 }
@@ -72,6 +74,9 @@ func (a *Agent) populateCache() (err error) {
 		return
 	}
 
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	a.todayData = dw.Today
 	a.tomorrowData = dw.Tomorrow
 
@@ -79,9 +84,15 @@ func (a *Agent) populateCache() (err error) {
 }
 
 func (a *Agent) GetToday() DayWeather {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
 	return a.todayData
 }
 
 func (a *Agent) GetTomorrow() DayWeather {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
 	return a.tomorrowData
 }
