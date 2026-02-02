@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/g-wilson/led/internal/calendar"
+	"github.com/g-wilson/led/internal/diagnostics"
 	"github.com/g-wilson/led/internal/tomorrowio"
 	"github.com/g-wilson/led/internal/weather"
 
@@ -27,6 +28,7 @@ var fontSource []byte
 type ClockRenderer struct {
 	font         *fopix.Drawer
 	weather      *weather.Agent
+	diagnostics  *diagnostics.Agent
 	location     *time.Location
 	pages        []string
 	currentPage  int
@@ -67,6 +69,11 @@ func New() (*ClockRenderer, error) {
 		return nil, fmt.Errorf("error initiating weather agent: %w", err)
 	}
 
+	diagAgent, err := diagnostics.New()
+	if err != nil {
+		return nil, fmt.Errorf("error initiating diagnostics agent: %w", err)
+	}
+
 	location, err := time.LoadLocation("Europe/London")
 	if err != nil {
 		return nil, fmt.Errorf("cannot determine timezone: %w", err)
@@ -75,8 +82,9 @@ func New() (*ClockRenderer, error) {
 	r := &ClockRenderer{
 		font:         font,
 		weather:      weatherAgent,
+		diagnostics:  diagAgent,
 		location:     location,
-		pages:        []string{"today", "tomorrow", "daylight", "countdown"},
+		pages:        []string{"today", "tomorrow", "daylight", "countdown", "diag"},
 		currentPage:  0,
 		pageInterval: 5 * time.Second,
 		debug:        os.Getenv("DEBUG") == "true",
@@ -133,6 +141,14 @@ func (r *ClockRenderer) DrawFrame(c *image.RGBA) error {
 			r.addText(c, image.Point{X: halfway, Y: 15}, event.Name, color.RGBA{60, 60, 215, 255})
 			r.addText(c, image.Point{X: 10, Y: 22}, formatDuration(event.Until()), color.RGBA{215, 0, 0, 255})
 		}
+	// Page 5: Diagnostics
+	case "diag":
+		status := r.diagnostics.GetStatus()
+		sinceText, sinceColor := diagSinceText(status)
+		pingText, pingColor := diagPingText(status)
+
+		r.addText(c, image.Point{X: 0, Y: 10}, sinceText, sinceColor)
+		r.addText(c, image.Point{X: 0, Y: 18}, pingText, pingColor)
 	default:
 		// do nothing
 	}
@@ -224,4 +240,66 @@ func (r *ClockRenderer) isCurrentlyOvernight() bool {
 	today6am := time.Date(year, month, day, 6, 0, 0, 0, r.location)
 
 	return today8pm.Before(now) || today6am.After(now)
+}
+
+var (
+	diagGreen  = color.RGBA{0, 200, 0, 255}
+	diagYellow = color.RGBA{200, 200, 0, 255}
+	diagOrange = color.RGBA{255, 140, 0, 255}
+	diagRed    = color.RGBA{200, 0, 0, 255}
+)
+
+func diagSinceText(status diagnostics.Status) (string, color.RGBA) {
+	if status.LastHealthyAt.IsZero() {
+		return "Last ok never", diagRed
+	}
+
+	since := time.Since(status.LastHealthyAt)
+	sinceText := fmt.Sprintf("Last ok %s", formatShortDuration(since))
+	if status.IsStale(time.Now()) {
+		return sinceText, diagRed
+	}
+
+	return sinceText, diagGreen
+}
+
+func diagPingText(status diagnostics.Status) (string, color.RGBA) {
+	if !status.LastPingOk {
+		return "Ping n/a", diagRed
+	}
+
+	pingText := fmt.Sprintf("Ping %dms", status.LastPing.Milliseconds())
+	level := status.PingLevel()
+	return pingText, diagPingColor(level)
+}
+
+func diagPingColor(level diagnostics.PingLevel) color.RGBA {
+	switch level {
+	case diagnostics.PingLevelGreen:
+		return diagGreen
+	case diagnostics.PingLevelYellow:
+		return diagYellow
+	case diagnostics.PingLevelOrange:
+		return diagOrange
+	default:
+		return diagRed
+	}
+}
+
+func formatShortDuration(d time.Duration) string {
+	if d < 0 {
+		return "0m"
+	}
+	d = d.Round(time.Minute)
+	if d < time.Minute {
+		return "0m"
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	}
+	if d < 24*time.Hour {
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	}
+
+	return fmt.Sprintf("%dd", int(d.Hours()/24))
 }
