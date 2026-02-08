@@ -98,13 +98,13 @@ func New() (*ClockRenderer, error) {
 // DrawFrame renders the current clock display into the provided target buffer.
 // The buffer is expected to be pre-cleared by the caller (FrameStreamer).
 func (r *ClockRenderer) DrawFrame(c *image.RGBA) error {
-	// if it's overnight, don't render anything (buffer is already cleared to black)
+	// clear the image to black as a background for the page
+	draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
+
+	// if it's overnight, don't render anything
 	if r.isCurrentlyOvernight() && !r.debug {
 		return nil
 	}
-
-	// clear the image to black as a background for the page
-	draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
 
 	// all pages - clock
 	r.addText(c, image.Point{X: 0, Y: -1}, r.getTimeString(), color.RGBA{200, 200, 200, 255})
