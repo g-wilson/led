@@ -28,6 +28,8 @@ type SensorState struct {
 	LastUpdated  string
 }
 
+const refreshInterval = 1 * time.Minute
+
 // StateProvider abstracts the Home Assistant API client.
 type StateProvider interface {
 	GetState(entityID string) (homeassistant.StateResponse, error)
@@ -41,29 +43,21 @@ type Agent struct {
 	sensors map[string]SensorState
 }
 
-type AgentOptions struct {
-	EntityIDs []string
-	Refresh   int
-}
-
-func New(client StateProvider, options AgentOptions) (*Agent, error) {
-	if len(options.EntityIDs) == 0 {
+func New(client StateProvider, entityIDs []string) (*Agent, error) {
+	if len(entityIDs) == 0 {
 		return nil, fmt.Errorf("at least one entity ID is required")
-	}
-	if options.Refresh <= 0 {
-		return nil, fmt.Errorf("refresh interval must be positive")
 	}
 
 	a := &Agent{
 		client:    client,
-		entityIDs: options.EntityIDs,
+		entityIDs: entityIDs,
 		sensors:   make(map[string]SensorState),
 	}
 
 	a.populateCache()
 
 	go func() {
-		ticker := time.NewTicker(time.Duration(options.Refresh) * time.Second)
+		ticker := time.NewTicker(refreshInterval)
 		for range ticker.C {
 			a.populateCache()
 		}

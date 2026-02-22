@@ -42,7 +42,6 @@ This keeps configuration simple and consistent with the existing env-var pattern
 | `HA_URL` | Yes | `http://192.168.1.100:8123` | Base URL of the HA instance |
 | `HA_TOKEN` | Yes | `eyJ0eXAi...` | Long-lived access token |
 | `HA_SENSORS` | Yes | `sensor.temp,sensor.humidity` | Comma-separated entity IDs |
-| `HA_REFRESH` | No | `60` | Polling interval in seconds (default: 60) |
 
 ## Package 1: `internal/homeassistant`
 
