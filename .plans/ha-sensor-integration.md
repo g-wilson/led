@@ -167,6 +167,42 @@ A `toDomain(entityID string, resp homeassistant.StateResponse) SensorState` func
    - Then iterates remaining attributes, skipping meta-attributes (`friendly_name`, `unit_of_measurement`, `icon`, `device_class`, `state_class`, `entity_picture`), and converts each value to string via `fmt.Sprintf`
 4. Builds `Attributes` map with all non-meta attributes as strings
 
+## Phase 2: Area Grouping (completed)
+
+To support rendering one screen per Home Assistant area, the agent was extended to fetch an area-to-sensor mapping from HA's template API at startup and expose it via `GetSensorsByArea()`.
+
+### Changes
+
+#### `internal/homeassistant/types.go`
+
+Added `AreaSensorsResponse` to represent the per-area result returned by the template API:
+
+```go
+type AreaSensorsResponse struct {
+    Area     string   `json:"area"`
+    Entities []string `json:"entities"`
+}
+```
+
+#### `internal/homeassistant/client.go`
+
+Added `RunTemplateAreaSensors()`, which `POST`s a Jinja2 template to `GET /api/template`. The template iterates all HA areas and collects their `sensor.*` entities into a JSON array. The response body is parsed directly into `[]AreaSensorsResponse`.
+
+#### `internal/hasensors/agent.go`
+
+- Added `AreaSensors` domain type (area name + slice of `SensorState`).
+- Extended `StateProvider` interface with `RunTemplateAreaSensors()`.
+- Added `areas []homeassistant.AreaSensorsResponse` field to `Agent`.
+- `New` calls `fetchAreas()` once at startup (before `populateCache`).
+- `fetchAreas()` calls the template API, then filters each area's entity list to only those present in the configured `entityIDs`. Configured entities not assigned to any HA area are collected into a final entry with an empty `Area` string.
+- `GetSensorsByArea()` joins the stored area/entity mapping with the live sensor cache under `RLock`, returning `[]AreaSensors`.
+
+### Design notes
+
+- Area data is fetched once at startup only; it is not refreshed on the regular polling interval. The assumption is that the user's HA area configuration is stable relative to sensor values.
+- Entities not assigned to any area are grouped together under `Area: ""` so callers always have a complete picture of configured sensors.
+- The template API call is fire-and-forget on error: a failure is logged and `areas` remains nil, so `GetSensorsByArea()` returns an empty slice while `GetAllSensors()` continues to work normally.
+
 ## Integration Point (clock package — future phase)
 
 For context on how this will eventually be consumed (not implemented now):
@@ -175,29 +211,17 @@ For context on how this will eventually be consumed (not implemented now):
 // in clock.go New():
 haClient := homeassistant.New(os.Getenv("HA_URL"), os.Getenv("HA_TOKEN"), nil)
 haEntityIDs := strings.Split(os.Getenv("HA_SENSORS"), ",")
-haRefresh, _ := strconv.ParseInt(os.Getenv("HA_REFRESH"), 10, 32)
-if haRefresh == 0 { haRefresh = 60 }
-haSensorsAgent, err := hasensors.New(haClient, hasensors.AgentOptions{
-    EntityIDs: haEntityIDs,
-    Refresh:   int(haRefresh),
-})
+haSensorsAgent, err := hasensors.New(haClient, haEntityIDs)
 ```
 
-The `ClockRenderer` struct would gain a `sensors *hasensors.Agent` field, and new pages would call `r.sensors.GetSensor(id)` or `r.sensors.GetAllSensors()` to render sensor data. But that's out of scope for this phase.
+The `ClockRenderer` struct would gain a `sensors *hasensors.Agent` field. New pages would call `r.sensors.GetSensorsByArea()` to render one screen per area, or `r.sensors.GetAllSensors()` for a flat view. Clock package integration is deferred to a future phase.
 
-## Files to Create
+## Files Created
 
-1. `internal/homeassistant/client.go` — HA REST API HTTP client
-2. `internal/homeassistant/types.go` — API response structs
-3. `internal/hasensors/agent.go` — background polling agent with domain types
+1. `internal/homeassistant/client.go` — HA REST API HTTP client (`GetState`, `RunTemplateAreaSensors`)
+2. `internal/homeassistant/types.go` — API response types (`StateResponse`, `AreaSensorsResponse`)
+3. `internal/hasensors/agent.go` — background polling agent with domain types and area grouping
 
-## Files to Modify
+## Files Modified
 
-None. The clock package integration is deferred to a future phase.
-
-## Implementation Order
-
-1. Create `internal/homeassistant/types.go` (API response types)
-2. Create `internal/homeassistant/client.go` (HTTP client)
-3. Create `internal/hasensors/agent.go` (domain types, provider interface, agent, domain conversion)
-4. Verify the project compiles with `go build ./...`
+None outside the new packages.
