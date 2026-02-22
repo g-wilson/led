@@ -47,6 +47,13 @@ type AgentOptions struct {
 }
 
 func New(client StateProvider, options AgentOptions) (*Agent, error) {
+	if len(options.EntityIDs) == 0 {
+		return nil, fmt.Errorf("at least one entity ID is required")
+	}
+	if options.Refresh <= 0 {
+		return nil, fmt.Errorf("refresh interval must be positive")
+	}
+
 	a := &Agent{
 		client:    client,
 		entityIDs: options.EntityIDs,
@@ -68,8 +75,6 @@ func New(client StateProvider, options AgentOptions) (*Agent, error) {
 func (a *Agent) populateCache() {
 	log.Println("fetching HA sensors")
 
-	results := make(map[string]SensorState)
-
 	for _, entityID := range a.entityIDs {
 		resp, err := a.client.GetState(entityID)
 		if err != nil {
@@ -77,13 +82,10 @@ func (a *Agent) populateCache() {
 			continue
 		}
 
-		results[entityID] = toDomain(entityID, resp)
+		a.mu.Lock()
+		a.sensors[entityID] = toDomain(entityID, resp)
+		a.mu.Unlock()
 	}
-
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	a.sensors = results
 }
 
 func (a *Agent) GetSensor(entityID string) (SensorState, bool) {

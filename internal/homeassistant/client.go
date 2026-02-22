@@ -34,8 +34,7 @@ func (c *Client) GetState(entityID string) (StateResponse, error) {
 	if err != nil {
 		return StateResponse{}, err
 	}
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.token))
-	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+c.token)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -49,9 +48,9 @@ func (c *Client) GetState(entityID string) (StateResponse, error) {
 	}
 
 	switch {
-	case resp.StatusCode > 499:
+	case resp.StatusCode >= 500:
 		err = errors.New(resp.Status)
-	case resp.StatusCode > 399:
+	case resp.StatusCode >= 400:
 		err = fmt.Errorf("home assistant API error: %s", resp.Status)
 	case resp.StatusCode < 200:
 		err = fmt.Errorf("unhandled_status %d", resp.StatusCode)
