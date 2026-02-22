@@ -10,6 +10,12 @@ import (
 	"github.com/g-wilson/led/internal/homeassistant"
 )
 
+// AreaSensors represents an area and the current state of its sensors.
+type AreaSensors struct {
+	Area    string
+	Sensors []SensorState
+}
+
 // Measurement represents a single key/value/unit tuple from a sensor.
 type Measurement struct {
 	Key   string
@@ -33,6 +39,7 @@ const refreshInterval = 1 * time.Minute
 // StateProvider abstracts the Home Assistant API client.
 type StateProvider interface {
 	GetState(entityID string) (homeassistant.StateResponse, error)
+	RunTemplateAreaSensors() ([]homeassistant.AreaSensorsResponse, error)
 }
 
 type Agent struct {
@@ -41,6 +48,7 @@ type Agent struct {
 
 	mu      sync.RWMutex
 	sensors map[string]SensorState
+	areas   []homeassistant.AreaSensorsResponse
 }
 
 func New(client StateProvider, entityIDs []string) (*Agent, error) {
@@ -54,6 +62,7 @@ func New(client StateProvider, entityIDs []string) (*Agent, error) {
 		sensors:   make(map[string]SensorState),
 	}
 
+	a.fetchAreas()
 	a.populateCache()
 
 	go func() {
@@ -100,6 +109,80 @@ func (a *Agent) GetAllSensors() []SensorState {
 	}
 
 	return out
+}
+
+func (a *Agent) GetSensorsByArea() []AreaSensors {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	out := make([]AreaSensors, 0, len(a.areas))
+	for _, ag := range a.areas {
+		as := AreaSensors{
+			Area:    ag.Area,
+			Sensors: make([]SensorState, 0, len(ag.Entities)),
+		}
+		for _, eid := range ag.Entities {
+			if s, ok := a.sensors[eid]; ok {
+				as.Sensors = append(as.Sensors, s)
+			}
+		}
+		out = append(out, as)
+	}
+
+	return out
+}
+
+func (a *Agent) fetchAreas() {
+	log.Println("fetching HA area groupings")
+
+	allAreas, err := a.client.RunTemplateAreaSensors()
+	if err != nil {
+		log.Println(fmt.Errorf("error fetching HA areas: %w", err))
+		return
+	}
+
+	// Build a set of configured entity IDs for fast lookup
+	configured := make(map[string]bool, len(a.entityIDs))
+	for _, id := range a.entityIDs {
+		configured[id] = true
+	}
+
+	// Filter each area's entities to only those in our configured list,
+	// and track which configured entities have been assigned to an area.
+	assigned := make(map[string]bool)
+	var filtered []homeassistant.AreaSensorsResponse
+
+	for _, ag := range allAreas {
+		var matched []string
+		for _, eid := range ag.Entities {
+			if configured[eid] {
+				matched = append(matched, eid)
+				assigned[eid] = true
+			}
+		}
+		if len(matched) > 0 {
+			filtered = append(filtered, homeassistant.AreaSensorsResponse{
+				Area:     ag.Area,
+				Entities: matched,
+			})
+		}
+	}
+
+	// Collect any configured entities not assigned to any area.
+	var unassigned []string
+	for _, id := range a.entityIDs {
+		if !assigned[id] {
+			unassigned = append(unassigned, id)
+		}
+	}
+	if len(unassigned) > 0 {
+		filtered = append(filtered, homeassistant.AreaSensorsResponse{
+			Area:     "",
+			Entities: unassigned,
+		})
+	}
+
+	a.areas = filtered
 }
 
 // metaAttributes are attribute keys that are excluded from the Measurements
