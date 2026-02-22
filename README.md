@@ -15,18 +15,25 @@ To run on the Pi, it requires compiling the [LED matrix C bindings](https://gith
 This project uses dotenv to manage config. Create a `.env` file before running:
 
 ```
-# Weather settings
+# Weather
 TOMORROWIO_API_KEY=xxxx
 WEATHER_LATITUDE=xxxx
 WEATHER_LONGITUDE=xxxx
 WEATHER_REFRESH=1800
 
-# LED settings
-LED_REFRESH=1000
+# Home Assistant
+HA_URL=http://192.168.1.100:8123
+HA_TOKEN=xxxx
+HA_SENSORS=sensor.temp,sensor.humidity
+
+# LED hardware (Pi only)
 LED_ROWS=32
 LED_COLS=64
 LED_PWM_BITS=11
 LED_PWM_LSB=130
 LED_BRIGHTNESS=30
 LED_HARDWARE=adafruit-hat
+
+# General
+DEBUG=false
 ```
