@@ -148,7 +148,7 @@ func (a *Agent) fetchAreas() {
 	}
 
 	// Filter each area's entities to only those in our configured list,
-	// and track which configured entities have been assigned to an area.
+	// tracking which configured entities were found in an area.
 	assigned := make(map[string]bool)
 	var filtered []homeassistant.AreaSensorsResponse
 
@@ -168,21 +168,19 @@ func (a *Agent) fetchAreas() {
 		}
 	}
 
-	// Collect any configured entities not assigned to any area.
-	var unassigned []string
+	// Log an error for each configured entity not found in any area and
+	// exclude it from future polling.
+	var validIDs []string
 	for _, id := range a.entityIDs {
-		if !assigned[id] {
-			unassigned = append(unassigned, id)
+		if assigned[id] {
+			validIDs = append(validIDs, id)
+		} else {
+			log.Println(fmt.Errorf("HA sensor %s not found in any area, skipping", id))
 		}
-	}
-	if len(unassigned) > 0 {
-		filtered = append(filtered, homeassistant.AreaSensorsResponse{
-			Area:     "",
-			Entities: unassigned,
-		})
 	}
 
 	a.areas = filtered
+	a.entityIDs = validIDs
 }
 
 // metaAttributes are attribute keys that are excluded from the Measurements
