@@ -111,12 +111,25 @@ func (a *Agent) GetAllSensors() []SensorState {
 	return out
 }
 
-func (a *Agent) GetSensorsByArea() []AreaSensors {
+func (a *Agent) GetAreas() []string {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
-	out := make([]AreaSensors, 0, len(a.areas))
+	areas := make([]string, 0, len(a.areas))
 	for _, ag := range a.areas {
+		areas = append(areas, ag.Area)
+	}
+	return areas
+}
+
+func (a *Agent) GetArea(area string) (AreaSensors, bool) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	for _, ag := range a.areas {
+		if ag.Area != area {
+			continue
+		}
 		as := AreaSensors{
 			Area:    ag.Area,
 			Sensors: make([]SensorState, 0, len(ag.Entities)),
@@ -126,10 +139,10 @@ func (a *Agent) GetSensorsByArea() []AreaSensors {
 				as.Sensors = append(as.Sensors, s)
 			}
 		}
-		out = append(out, as)
+		return as, true
 	}
 
-	return out
+	return AreaSensors{}, false
 }
 
 func (a *Agent) fetchAreas() {
