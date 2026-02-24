@@ -30,7 +30,20 @@ func New(baseURL, token string, client *http.Client) *Client {
 	}
 }
 
-const areaSensorsTemplate = `{%- set ns = namespace(result=[]) -%}{%- for aid in areas() -%}  {%- set sensors = area_entities(aid)        | select('match', '^sensor\\.')        | list -%}  {%- if sensors -%}    {%- set ns.result = ns.result + [        {"area": area_name(aid), "entities": sensors}    ] -%}  {%- endif -%}{%- endfor -%}{{ ns.result | to_json }}`
+const areaSensorsTemplate = `
+{%- set ns = namespace(result=[]) -%}
+{%- for aid in areas() -%}
+  {%- set sensors = area_entities(aid)
+      | select('match', '^sensor\\.')
+      | list -%}
+  {%- if sensors -%}
+    {%- set ns.result = ns.result + [
+        {"area": area_name(aid), "entities": sensors}
+    ] -%}
+  {%- endif -%}
+{%- endfor -%}
+{{ ns.result | to_json }}
+`
 
 func (c *Client) RunTemplateAreaSensors() ([]AreaSensorsResponse, error) {
 	payload, err := json.Marshal(map[string]string{"template": areaSensorsTemplate})
