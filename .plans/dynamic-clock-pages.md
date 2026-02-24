@@ -72,8 +72,8 @@ if haURL != "" && haToken != "" && len(haEntityIDs) > 0 {
         log.Printf("sensors agent unavailable, skipping area pages: %v", err)
     } else {
         r.sensors = sensorsAgent
-        for _, as := range sensorsAgent.GetSensorsByArea() {
-            areaName := as.Area
+        for _, areaName := range sensorsAgent.GetAreas() {
+            areaName := areaName
             r.pages = append(r.pages, func(c *image.RGBA) error {
                 return r.renderArea(c, areaName)
             })
@@ -82,13 +82,26 @@ if haURL != "" && haToken != "" && len(haEntityIDs) > 0 {
 }
 ```
 
-`hasensors.New()` calls `fetchAreas()` synchronously before returning, so area names are immediately available. If `fetchAreas()` failed internally, `GetSensorsByArea()` returns an empty slice and the loop adds nothing — static pages are unaffected.
+`hasensors.New()` calls `fetchAreas()` synchronously before returning, so area names are immediately available. If `fetchAreas()` failed internally, `GetAreas()` returns an empty slice and the loop adds nothing — static pages are unaffected.
 
 ### `internal/hasensors/agent.go`
 
-Add `GetArea` alongside the existing `GetSensorsByArea`:
+Replace `GetSensorsByArea() []AreaSensors` with two focused methods:
 
 ```go
+// GetAreas returns the names of all configured areas.
+func (a *Agent) GetAreas() []string {
+    a.mu.RLock()
+    defer a.mu.RUnlock()
+
+    areas := make([]string, 0, len(a.areas))
+    for _, ag := range a.areas {
+        areas = append(areas, ag.Area)
+    }
+    return areas
+}
+
+// GetArea returns the current sensor states for a single area.
 func (a *Agent) GetArea(area string) (AreaSensors, bool) {
     a.mu.RLock()
     defer a.mu.RUnlock()
@@ -113,7 +126,7 @@ func (a *Agent) GetArea(area string) (AreaSensors, bool) {
 }
 ```
 
-`GetSensorsByArea() []AreaSensors` is retained — it is still used in `New()` to enumerate area names when building the page list.
+`GetSensorsByArea() []AreaSensors` is removed — no caller needs area names and sensor states together at the same time.
 
 #### `DrawFrame()`
 
@@ -158,7 +171,7 @@ This is intentionally minimal. The layout will be iterated in a follow-up.
 
 ## Files Modified
 
-1. `internal/hasensors/agent.go` — add `GetArea` method
+1. `internal/hasensors/agent.go` — replace `GetSensorsByArea` with `GetAreas` and `GetArea`
 2. `clock/clock.go` — all clock changes
 
 ## Files Created
