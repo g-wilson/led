@@ -84,6 +84,37 @@ if haURL != "" && haToken != "" && len(haEntityIDs) > 0 {
 
 `hasensors.New()` calls `fetchAreas()` synchronously before returning, so area names are immediately available. If `fetchAreas()` failed internally, `GetSensorsByArea()` returns an empty slice and the loop adds nothing — static pages are unaffected.
 
+### `internal/hasensors/agent.go`
+
+Add `GetArea` alongside the existing `GetSensorsByArea`:
+
+```go
+func (a *Agent) GetArea(area string) (AreaSensors, bool) {
+    a.mu.RLock()
+    defer a.mu.RUnlock()
+
+    for _, ag := range a.areas {
+        if ag.Area != area {
+            continue
+        }
+        as := AreaSensors{
+            Area:    ag.Area,
+            Sensors: make([]SensorState, 0, len(ag.Entities)),
+        }
+        for _, eid := range ag.Entities {
+            if s, ok := a.sensors[eid]; ok {
+                as.Sensors = append(as.Sensors, s)
+            }
+        }
+        return as, true
+    }
+
+    return AreaSensors{}, false
+}
+```
+
+`GetSensorsByArea() []AreaSensors` is retained — it is still used in `New()` to enumerate area names when building the page list.
+
 #### `DrawFrame()`
 
 Remove the switch statement. The page render call becomes:
@@ -112,16 +143,11 @@ The method bodies are the existing switch case bodies verbatim, with `return nil
 func (r *ClockRenderer) renderArea(c *image.RGBA, area string) error {
     r.addText(c, image.Point{X: 0, Y: 8}, area, color.RGBA{215, 0, 88, 255})
 
-    sensors := r.sensors.GetSensorsByArea()
-    for _, as := range sensors {
-        if as.Area != area {
-            continue
-        }
+    if as, ok := r.sensors.GetArea(area); ok {
         for i, s := range as.Sensors {
             y := 16 + (i * 8)
             r.addText(c, image.Point{X: 0, Y: y}, fmt.Sprintf("%s %s%s", s.Name, s.State, s.Unit), color.RGBA{200, 200, 200, 255})
         }
-        break
     }
 
     return nil
@@ -132,7 +158,8 @@ This is intentionally minimal. The layout will be iterated in a follow-up.
 
 ## Files Modified
 
-1. `clock/clock.go` — all changes are contained here
+1. `internal/hasensors/agent.go` — add `GetArea` method
+2. `clock/clock.go` — all clock changes
 
 ## Files Created
 
