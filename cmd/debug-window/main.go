@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"image"
 	"log"
 	"os"
@@ -39,7 +40,7 @@ func main() {
 	defer glfw.Terminate()
 
 	// Create clock renderer
-	clockApp, err := clock.New()
+	clockApp, err := clock.New(context.Background())
 	if err != nil {
 		log.Fatalln(err)
 	}

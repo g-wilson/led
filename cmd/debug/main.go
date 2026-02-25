@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"image"
 	"image/png"
@@ -31,7 +32,7 @@ func main() {
 		Max: image.Point{X: int(cols), Y: int(rows)},
 	}
 
-	clockApp, err := clock.New()
+	clockApp, err := clock.New(context.Background())
 	if err != nil {
 		log.Fatalln(err)
 	}

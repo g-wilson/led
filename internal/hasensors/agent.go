@@ -44,6 +44,7 @@ type StateProvider interface {
 }
 
 type Agent struct {
+	ctx       context.Context
 	client    StateProvider
 	entityIDs []string
 
@@ -52,12 +53,13 @@ type Agent struct {
 	areas   []homeassistant.AreaSensorsResponse
 }
 
-func New(client StateProvider, entityIDs []string) (*Agent, error) {
+func New(ctx context.Context, client StateProvider, entityIDs []string) (*Agent, error) {
 	if len(entityIDs) == 0 {
 		return nil, fmt.Errorf("at least one entity ID is required")
 	}
 
 	a := &Agent{
+		ctx:       ctx,
 		client:    client,
 		entityIDs: entityIDs,
 		sensors:   make(map[string]SensorState),
@@ -80,7 +82,7 @@ func (a *Agent) populateCache() {
 	log.Println("fetching HA sensors")
 
 	for _, entityID := range a.entityIDs {
-		resp, err := a.client.GetState(context.Background(), entityID)
+		resp, err := a.client.GetState(a.ctx, entityID)
 		if err != nil {
 			log.Printf("error fetching HA sensor %s: %v", entityID, err)
 			continue
@@ -149,7 +151,7 @@ func (a *Agent) GetArea(area string) (AreaSensors, bool) {
 func (a *Agent) fetchAreas() {
 	log.Println("fetching HA area groupings")
 
-	allAreas, err := a.client.RunTemplateAreaSensors(context.Background())
+	allAreas, err := a.client.RunTemplateAreaSensors(a.ctx)
 	if err != nil {
 		log.Printf("error fetching HA areas: %v", err)
 		return

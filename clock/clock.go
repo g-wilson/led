@@ -1,6 +1,7 @@
 package clock
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -44,7 +45,7 @@ type ClockRenderer struct {
 	debug        bool
 }
 
-func New() (*ClockRenderer, error) {
+func New(ctx context.Context) (*ClockRenderer, error) {
 	err := godotenv.Load()
 	if err != nil {
 		return nil, fmt.Errorf("error loading .env file: %w", err)
@@ -113,7 +114,7 @@ func New() (*ClockRenderer, error) {
 	if haURL != "" && haToken != "" && haSensorsEnv != "" {
 		haEntityIDs := strings.Split(haSensorsEnv, ",")
 		haClient := homeassistant.New(haURL, haToken, nil)
-		sensorsAgent, err := hasensors.New(haClient, haEntityIDs)
+		sensorsAgent, err := hasensors.New(ctx, haClient, haEntityIDs)
 		if err != nil {
 			log.Printf("sensors agent unavailable, skipping area pages: %v", err)
 		} else {

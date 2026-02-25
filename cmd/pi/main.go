@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"image"
 	"image/color"
@@ -48,7 +49,7 @@ func main() {
 	c := rgbmatrix.NewCanvas(m)
 	draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
 
-	clockApp, err := clock.New()
+	clockApp, err := clock.New(context.Background())
 	if err != nil {
 		log.Fatalln(err)
 	}
