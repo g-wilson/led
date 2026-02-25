@@ -69,7 +69,7 @@ func New(ctx context.Context) (*ClockRenderer, error) {
 
 	tomorrowIoClient := tomorrowio.New(tomorrowIoAPIKey, nil)
 	weatherRefresh, _ := strconv.ParseInt(os.Getenv("WEATHER_REFRESH"), 10, 32)
-	weatherAgent, err := weather.New(tomorrowIoClient, weather.AgentOptions{
+	weatherAgent, err := weather.New(ctx, tomorrowIoClient, weather.AgentOptions{
 		Refresh:   int(weatherRefresh),
 		Latitude:  os.Getenv("WEATHER_LATITUDE"),
 		Longitude: os.Getenv("WEATHER_LONGITUDE"),
@@ -78,7 +78,7 @@ func New(ctx context.Context) (*ClockRenderer, error) {
 		return nil, fmt.Errorf("error initiating weather agent: %w", err)
 	}
 
-	diagAgent, err := diagnostics.New()
+	diagAgent, err := diagnostics.New(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error initiating diagnostics agent: %w", err)
 	}
@@ -127,7 +127,7 @@ func New(ctx context.Context) (*ClockRenderer, error) {
 		}
 	}
 
-	r.startPageIterator()
+	r.startPageIterator(ctx)
 
 	return r, nil
 }
@@ -217,16 +217,22 @@ func (r *ClockRenderer) getTimeString() string {
 
 // startPageIterator kicks off a goroutine ticking continuously through
 // the length of the pages array, updating the current page each time
-func (r *ClockRenderer) startPageIterator() {
+func (r *ClockRenderer) startPageIterator(ctx context.Context) {
 	go func() {
 		i := int32(0)
 		ticker := time.NewTicker(r.pageInterval)
-		for range ticker.C {
-			i++
-			if int(i) > len(r.pages)-1 {
-				i = 0
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				i++
+				if int(i) > len(r.pages)-1 {
+					i = 0
+				}
+				r.currentPage.Store(i)
 			}
-			r.currentPage.Store(i)
 		}
 	}()
 }

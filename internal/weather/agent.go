@@ -1,11 +1,14 @@
 package weather
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sync"
 	"time"
 )
+
+const populateCacheTimeout = 15 * time.Second
 
 type DayWeather struct {
 	TemperatureHigh float32
@@ -25,10 +28,11 @@ type TwoDayWeather struct {
 }
 
 type DayWeatherProvider interface {
-	GetTwoDayWeatherAtLocation(lat, lon string) (TwoDayWeather, error)
+	GetTwoDayWeatherAtLocation(ctx context.Context, lat, lon string) (TwoDayWeather, error)
 }
 
 type Agent struct {
+	ctx     context.Context
 	client  DayWeatherProvider
 	options AgentOptions
 
@@ -43,8 +47,9 @@ type AgentOptions struct {
 	Refresh   int
 }
 
-func New(client DayWeatherProvider, options AgentOptions) (*Agent, error) {
+func New(ctx context.Context, client DayWeatherProvider, options AgentOptions) (*Agent, error) {
 	a := &Agent{
+		ctx:     ctx,
 		client:  client,
 		options: options,
 	}
@@ -56,10 +61,15 @@ func New(client DayWeatherProvider, options AgentOptions) (*Agent, error) {
 
 	go func() {
 		ticker := time.NewTicker(time.Duration(options.Refresh) * time.Second)
-		for range ticker.C {
-			err := a.populateCache()
-			if err != nil {
-				log.Println(fmt.Errorf("error fetching weather: %w", err))
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if err := a.populateCache(); err != nil {
+					log.Println(fmt.Errorf("error fetching weather: %w", err))
+				}
 			}
 		}
 	}()
@@ -69,7 +79,11 @@ func New(client DayWeatherProvider, options AgentOptions) (*Agent, error) {
 
 func (a *Agent) populateCache() (err error) {
 	log.Println("fetching weather")
-	dw, err := a.client.GetTwoDayWeatherAtLocation(a.options.Latitude, a.options.Longitude)
+
+	ctx, cancel := context.WithTimeout(a.ctx, populateCacheTimeout)
+	defer cancel()
+
+	dw, err := a.client.GetTwoDayWeatherAtLocation(ctx, a.options.Latitude, a.options.Longitude)
 	if err != nil {
 		return
 	}
