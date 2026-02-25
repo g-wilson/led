@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/g-wilson/led/internal/calendar"
@@ -38,7 +39,7 @@ type ClockRenderer struct {
 	sensors      *hasensors.Agent
 	location     *time.Location
 	pages        []page
-	currentPage  int
+	currentPage  atomic.Int32
 	pageInterval time.Duration
 	debug        bool
 }
@@ -91,7 +92,6 @@ func New() (*ClockRenderer, error) {
 		weather:      weatherAgent,
 		diagnostics:  diagAgent,
 		location:     location,
-		currentPage:  0,
 		pageInterval: 5 * time.Second,
 		debug:        os.Getenv("DEBUG") == "true",
 	}
@@ -108,9 +108,10 @@ func New() (*ClockRenderer, error) {
 	// Phase 2: dynamic area pages (skipped entirely if HA env vars not set)
 	haURL := os.Getenv("HA_URL")
 	haToken := os.Getenv("HA_TOKEN")
-	haEntityIDs := strings.Split(os.Getenv("HA_SENSORS"), ",")
+	haSensorsEnv := os.Getenv("HA_SENSORS")
 
-	if haURL != "" && haToken != "" && len(haEntityIDs) > 0 {
+	if haURL != "" && haToken != "" && haSensorsEnv != "" {
+		haEntityIDs := strings.Split(haSensorsEnv, ",")
 		haClient := homeassistant.New(haURL, haToken, nil)
 		sensorsAgent, err := hasensors.New(haClient, haEntityIDs)
 		if err != nil {
@@ -118,7 +119,6 @@ func New() (*ClockRenderer, error) {
 		} else {
 			r.sensors = sensorsAgent
 			for _, areaName := range sensorsAgent.GetAreas() {
-				areaName := areaName
 				r.pages = append(r.pages, func(c *image.RGBA) error {
 					return r.renderArea(c, areaName)
 				})
@@ -145,7 +145,7 @@ func (r *ClockRenderer) DrawFrame(c *image.RGBA) error {
 	// all pages - clock
 	r.addText(c, image.Point{X: 0, Y: -1}, r.getTimeString(), color.RGBA{200, 200, 200, 255})
 
-	return r.pages[r.currentPage](c)
+	return r.pages[r.currentPage.Load()](c)
 }
 
 func (r *ClockRenderer) renderToday(c *image.RGBA) error {
@@ -218,15 +218,14 @@ func (r *ClockRenderer) getTimeString() string {
 // the length of the pages array, updating the current page each time
 func (r *ClockRenderer) startPageIterator() {
 	go func() {
-		i := 0
+		i := int32(0)
 		ticker := time.NewTicker(r.pageInterval)
 		for range ticker.C {
-			i += 1
-			if i > (len(r.pages) - 1) {
+			i++
+			if int(i) > len(r.pages)-1 {
 				i = 0
 			}
-
-			r.currentPage = i
+			r.currentPage.Store(i)
 		}
 	}()
 }

@@ -1,6 +1,7 @@
 package hasensors
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -38,8 +39,8 @@ const refreshInterval = 1 * time.Minute
 
 // StateProvider abstracts the Home Assistant API client.
 type StateProvider interface {
-	GetState(entityID string) (homeassistant.StateResponse, error)
-	RunTemplateAreaSensors() ([]homeassistant.AreaSensorsResponse, error)
+	GetState(ctx context.Context, entityID string) (homeassistant.StateResponse, error)
+	RunTemplateAreaSensors(ctx context.Context) ([]homeassistant.AreaSensorsResponse, error)
 }
 
 type Agent struct {
@@ -79,9 +80,9 @@ func (a *Agent) populateCache() {
 	log.Println("fetching HA sensors")
 
 	for _, entityID := range a.entityIDs {
-		resp, err := a.client.GetState(entityID)
+		resp, err := a.client.GetState(context.Background(), entityID)
 		if err != nil {
-			log.Println(fmt.Errorf("error fetching HA sensor %s: %w", entityID, err))
+			log.Printf("error fetching HA sensor %s: %v", entityID, err)
 			continue
 		}
 
@@ -148,9 +149,9 @@ func (a *Agent) GetArea(area string) (AreaSensors, bool) {
 func (a *Agent) fetchAreas() {
 	log.Println("fetching HA area groupings")
 
-	allAreas, err := a.client.RunTemplateAreaSensors()
+	allAreas, err := a.client.RunTemplateAreaSensors(context.Background())
 	if err != nil {
-		log.Println(fmt.Errorf("error fetching HA areas: %w", err))
+		log.Printf("error fetching HA areas: %v", err)
 		return
 	}
 
@@ -188,12 +189,14 @@ func (a *Agent) fetchAreas() {
 		if assigned[id] {
 			validIDs = append(validIDs, id)
 		} else {
-			log.Println(fmt.Errorf("HA sensor %s not found in any area, skipping", id))
+			log.Printf("HA sensor %s not found in any area, skipping", id)
 		}
 	}
 
+	a.mu.Lock()
 	a.areas = filtered
 	a.entityIDs = validIDs
+	a.mu.Unlock()
 }
 
 // metaAttributes are attribute keys that are excluded from the Measurements
