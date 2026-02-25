@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"sync"
 	"time"
 )
 
@@ -38,6 +39,8 @@ type FrameStreamer struct {
 	bounds   image.Rectangle
 	ticker   *time.Ticker
 	started  bool
+	done     chan struct{}
+	stopOnce sync.Once
 
 	// Buffer pool - triple buffering for zero-allocation frame streaming
 	buffers [bufferCount]*image.RGBA
@@ -54,9 +57,9 @@ type Params struct {
 // It pre-allocates a triple buffer pool based on the provided bounds.
 func New(params Params) *FrameStreamer {
 	fs := &FrameStreamer{
-		C: make(chan *image.RGBA),
-		E: make(chan error),
-
+		C:        make(chan *image.RGBA),
+		E:        make(chan error),
+		done:     make(chan struct{}),
 		renderer: params.Renderer,
 		bounds:   params.Bounds,
 		ticker:   time.NewTicker(time.Duration(params.FrametimeMs) * time.Millisecond),
@@ -73,6 +76,7 @@ func New(params Params) *FrameStreamer {
 
 // Start loops on the ticker and on each tick renders a frame, sending it to the frame channel.
 // Buffers are rotated through the pool to avoid allocations.
+// Start closes fs.C and fs.E when it exits, so consumers can range over them safely.
 func (fs *FrameStreamer) Start() {
 	if fs.started {
 		return
@@ -83,30 +87,47 @@ func (fs *FrameStreamer) Start() {
 	buf := fs.buffers[fs.current]
 	draw.Draw(buf, buf.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
 
+	// Start() is the sole sender on fs.C and fs.E, so it is responsible for closing them.
+	defer close(fs.C)
+	defer close(fs.E)
+
 	// ticker used instead of sleep:
 	// tickers drop ticks for slow recievers i.e. if recieving on the
 	// FS channel is blocked, ticks slow and the renderer is not called un-necessarily
-	for range fs.ticker.C {
-		// Rotate to next buffer
-		fs.current = (fs.current + 1) % bufferCount
-		buf := fs.buffers[fs.current]
-
-		// Renderer draws into the provided buffer
-		// Note that we do not clear the image data in the buffer here
-		err := fs.renderer.DrawFrame(buf)
-		if err != nil {
-			fs.E <- err
+	for {
+		select {
+		case <-fs.done:
 			return
-		}
+		case <-fs.ticker.C:
+			// Rotate to next buffer
+			fs.current = (fs.current + 1) % bufferCount
+			buf := fs.buffers[fs.current]
 
-		fs.C <- buf
+			// Renderer draws into the provided buffer
+			// Note that we do not clear the image data in the buffer here
+			err := fs.renderer.DrawFrame(buf)
+			if err != nil {
+				select {
+				case fs.E <- err:
+				case <-fs.done:
+				}
+				return
+			}
+
+			select {
+			case fs.C <- buf:
+			case <-fs.done:
+				return
+			}
+		}
 	}
 }
 
-// Stop ends the ticker and closes the channels
+// Stop signals Start to exit and waits for channels to be closed.
+// Safe to call multiple times.
 func (fs *FrameStreamer) Stop() {
-	fs.ticker.Stop()
-
-	close(fs.C)
-	close(fs.E)
+	fs.stopOnce.Do(func() {
+		fs.ticker.Stop()
+		close(fs.done)
+	})
 }

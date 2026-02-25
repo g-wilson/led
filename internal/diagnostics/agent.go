@@ -1,6 +1,7 @@
 package diagnostics
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -71,14 +72,20 @@ type Agent struct {
 	lastCheckedAt time.Time
 }
 
-func New() (*Agent, error) {
+func New(ctx context.Context) (*Agent, error) {
 	a := &Agent{}
-	a.checkOnce()
+	a.checkOnce(ctx)
 
 	go func() {
 		ticker := time.NewTicker(pingInterval)
-		for range ticker.C {
-			a.checkOnce()
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				a.checkOnce(ctx)
+			}
 		}
 	}()
 
@@ -97,10 +104,10 @@ func (a *Agent) GetStatus() Status {
 	}
 }
 
-func (a *Agent) checkOnce() {
+func (a *Agent) checkOnce(ctx context.Context) {
 	start := time.Now()
 	dialer := net.Dialer{Timeout: pingTimeout}
-	conn, err := dialer.Dial(pingNetwork, pingAddress)
+	conn, err := dialer.DialContext(ctx, pingNetwork, pingAddress)
 	elapsed := time.Since(start)
 
 	a.mu.Lock()

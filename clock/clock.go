@@ -1,6 +1,7 @@
 package clock
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -8,12 +9,17 @@ import (
 	"image"
 	"image/color"
 	_ "image/png"
+	"log"
 	"os"
 	"strconv"
+	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/g-wilson/led/internal/calendar"
 	"github.com/g-wilson/led/internal/diagnostics"
+	"github.com/g-wilson/led/internal/hasensors"
+	"github.com/g-wilson/led/internal/homeassistant"
 	"github.com/g-wilson/led/internal/tomorrowio"
 	"github.com/g-wilson/led/internal/weather"
 
@@ -25,18 +31,21 @@ import (
 //go:embed fonts/tom-thumb-new.json
 var fontSource []byte
 
+type page func(c *image.RGBA) error
+
 type ClockRenderer struct {
 	font         *fopix.Drawer
 	weather      *weather.Agent
 	diagnostics  *diagnostics.Agent
+	sensors      *hasensors.Agent
 	location     *time.Location
-	pages        []string
-	currentPage  int
+	pages        []page
+	currentPage  atomic.Int32
 	pageInterval time.Duration
 	debug        bool
 }
 
-func New() (*ClockRenderer, error) {
+func New(ctx context.Context) (*ClockRenderer, error) {
 	err := godotenv.Load()
 	if err != nil {
 		return nil, fmt.Errorf("error loading .env file: %w", err)
@@ -60,7 +69,7 @@ func New() (*ClockRenderer, error) {
 
 	tomorrowIoClient := tomorrowio.New(tomorrowIoAPIKey, nil)
 	weatherRefresh, _ := strconv.ParseInt(os.Getenv("WEATHER_REFRESH"), 10, 32)
-	weatherAgent, err := weather.New(tomorrowIoClient, weather.AgentOptions{
+	weatherAgent, err := weather.New(ctx, tomorrowIoClient, weather.AgentOptions{
 		Refresh:   int(weatherRefresh),
 		Latitude:  os.Getenv("WEATHER_LATITUDE"),
 		Longitude: os.Getenv("WEATHER_LONGITUDE"),
@@ -69,7 +78,7 @@ func New() (*ClockRenderer, error) {
 		return nil, fmt.Errorf("error initiating weather agent: %w", err)
 	}
 
-	diagAgent, err := diagnostics.New()
+	diagAgent, err := diagnostics.New(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error initiating diagnostics agent: %w", err)
 	}
@@ -84,13 +93,41 @@ func New() (*ClockRenderer, error) {
 		weather:      weatherAgent,
 		diagnostics:  diagAgent,
 		location:     location,
-		pages:        []string{"today", "tomorrow", "daylight", "countdown", "diag"},
-		currentPage:  0,
 		pageInterval: 5 * time.Second,
 		debug:        os.Getenv("DEBUG") == "true",
 	}
 
-	r.startPageIterator()
+	// Phase 1: static pages
+	r.pages = []page{
+		r.renderToday,
+		r.renderTomorrow,
+		r.renderDaylight,
+		r.renderCountdown,
+		r.renderDiag,
+	}
+
+	// Phase 2: dynamic area pages (skipped entirely if HA env vars not set)
+	haURL := os.Getenv("HA_URL")
+	haToken := os.Getenv("HA_TOKEN")
+	haSensorsEnv := os.Getenv("HA_SENSORS")
+
+	if haURL != "" && haToken != "" && haSensorsEnv != "" {
+		haEntityIDs := strings.Split(haSensorsEnv, ",")
+		haClient := homeassistant.New(haURL, haToken, nil)
+		sensorsAgent, err := hasensors.New(ctx, haClient, haEntityIDs)
+		if err != nil {
+			log.Printf("sensors agent unavailable, skipping area pages: %v", err)
+		} else {
+			r.sensors = sensorsAgent
+			for _, areaName := range sensorsAgent.GetAreas() {
+				r.pages = append(r.pages, func(c *image.RGBA) error {
+					return r.renderArea(c, areaName)
+				})
+			}
+		}
+	}
+
+	r.startPageIterator(ctx)
 
 	return r, nil
 }
@@ -109,48 +146,61 @@ func (r *ClockRenderer) DrawFrame(c *image.RGBA) error {
 	// all pages - clock
 	r.addText(c, image.Point{X: 0, Y: -1}, r.getTimeString(), color.RGBA{200, 200, 200, 255})
 
-	// render the current page
-	switch r.pages[r.currentPage] {
-	// Page 1: Today's weather
-	case "today":
-		w := r.weather.GetToday()
-		r.addText(c, image.Point{X: 0, Y: 8}, "Today", color.RGBA{215, 0, 88, 255})
-		r.renderWeather(c, w)
+	return r.pages[r.currentPage.Load()](c)
+}
 
-	// Page 2: Tomorrow's weather
-	case "tomorrow":
-		w := r.weather.GetTomorrow()
-		r.addText(c, image.Point{X: 0, Y: 8}, "Tomorrow", color.RGBA{215, 0, 88, 255})
-		r.renderWeather(c, w)
+func (r *ClockRenderer) renderToday(c *image.RGBA) error {
+	w := r.weather.GetToday()
+	r.addText(c, image.Point{X: 0, Y: 8}, "Today", color.RGBA{215, 0, 88, 255})
+	r.renderWeather(c, w)
+	return nil
+}
 
-	// Page 3: Sunset + Sunrise
-	case "daylight":
-		w := r.weather.GetToday()
-		sunrise := w.SunriseTime.UTC().In(r.location).Format("15:04")
-		sunset := w.SunsetTime.UTC().In(r.location).Format("15:04")
-		r.addText(c, image.Point{X: 4, Y: 10}, fmt.Sprintf("Sunrise %s", sunrise), color.RGBA{152, 168, 27, 255})
-		r.addText(c, image.Point{X: 8, Y: 18}, fmt.Sprintf("Sunset %s", sunset), color.RGBA{194, 27, 27, 255})
+func (r *ClockRenderer) renderTomorrow(c *image.RGBA) error {
+	w := r.weather.GetTomorrow()
+	r.addText(c, image.Point{X: 0, Y: 8}, "Tomorrow", color.RGBA{215, 0, 88, 255})
+	r.renderWeather(c, w)
+	return nil
+}
 
-	// Page 4: Event countdown
-	case "countdown":
-		if event := calendar.GetNextEvent(); event != nil {
-			if event.Image != nil {
-				draw.Draw(c, c.Bounds(), event.Image, image.Point{X: -44, Y: -9}, draw.Over)
-			}
-			halfway := 32 - int(float64((4*len(event.Name))/2))
-			r.addText(c, image.Point{X: halfway, Y: 15}, event.Name, color.RGBA{60, 60, 215, 255})
-			r.addText(c, image.Point{X: 10, Y: 22}, formatDuration(event.Until()), color.RGBA{215, 0, 0, 255})
+func (r *ClockRenderer) renderDaylight(c *image.RGBA) error {
+	w := r.weather.GetToday()
+	sunrise := w.SunriseTime.UTC().In(r.location).Format("15:04")
+	sunset := w.SunsetTime.UTC().In(r.location).Format("15:04")
+	r.addText(c, image.Point{X: 4, Y: 10}, fmt.Sprintf("Sunrise %s", sunrise), color.RGBA{152, 168, 27, 255})
+	r.addText(c, image.Point{X: 8, Y: 18}, fmt.Sprintf("Sunset %s", sunset), color.RGBA{194, 27, 27, 255})
+	return nil
+}
+
+func (r *ClockRenderer) renderCountdown(c *image.RGBA) error {
+	if event := calendar.GetNextEvent(); event != nil {
+		if event.Image != nil {
+			draw.Draw(c, c.Bounds(), event.Image, image.Point{X: -44, Y: -9}, draw.Over)
 		}
-	// Page 5: Diagnostics
-	case "diag":
-		status := r.diagnostics.GetStatus()
-		sinceText, sinceColor := diagSinceText(status)
-		pingText, pingColor := diagPingText(status)
+		halfway := 32 - int(float64((4*len(event.Name))/2))
+		r.addText(c, image.Point{X: halfway, Y: 15}, event.Name, color.RGBA{60, 60, 215, 255})
+		r.addText(c, image.Point{X: 10, Y: 22}, formatDuration(event.Until()), color.RGBA{215, 0, 0, 255})
+	}
+	return nil
+}
 
-		r.addText(c, image.Point{X: 0, Y: 10}, sinceText, sinceColor)
-		r.addText(c, image.Point{X: 0, Y: 18}, pingText, pingColor)
-	default:
-		// do nothing
+func (r *ClockRenderer) renderDiag(c *image.RGBA) error {
+	status := r.diagnostics.GetStatus()
+	sinceText, sinceColor := diagSinceText(status)
+	pingText, pingColor := diagPingText(status)
+	r.addText(c, image.Point{X: 0, Y: 10}, sinceText, sinceColor)
+	r.addText(c, image.Point{X: 0, Y: 18}, pingText, pingColor)
+	return nil
+}
+
+func (r *ClockRenderer) renderArea(c *image.RGBA, area string) error {
+	r.addText(c, image.Point{X: 0, Y: 8}, area, color.RGBA{215, 0, 88, 255})
+
+	if as, ok := r.sensors.GetArea(area); ok {
+		for i, s := range as.Sensors {
+			y := 16 + (i * 8)
+			r.addText(c, image.Point{X: 0, Y: y}, fmt.Sprintf("%s %s%s", s.Name, s.State, s.Unit), color.RGBA{200, 200, 200, 255})
+		}
 	}
 
 	return nil
@@ -167,17 +217,22 @@ func (r *ClockRenderer) getTimeString() string {
 
 // startPageIterator kicks off a goroutine ticking continuously through
 // the length of the pages array, updating the current page each time
-func (r *ClockRenderer) startPageIterator() {
+func (r *ClockRenderer) startPageIterator(ctx context.Context) {
 	go func() {
-		i := 0
+		i := int32(0)
 		ticker := time.NewTicker(r.pageInterval)
-		for range ticker.C {
-			i += 1
-			if i > (len(r.pages) - 1) {
-				i = 0
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				i++
+				if int(i) > len(r.pages)-1 {
+					i = 0
+				}
+				r.currentPage.Store(i)
 			}
-
-			r.currentPage = i
 		}
 	}()
 }

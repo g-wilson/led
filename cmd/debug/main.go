@@ -1,13 +1,14 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
+	"context"
 	"image"
 	"image/png"
 	"log"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 
 	"github.com/g-wilson/led/clock"
 	"github.com/g-wilson/led/internal/framestreamer"
@@ -31,7 +32,10 @@ func main() {
 		Max: image.Point{X: int(cols), Y: int(rows)},
 	}
 
-	clockApp, err := clock.New()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	clockApp, err := clock.New(ctx)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -45,21 +49,25 @@ func main() {
 	go func() {
 		for {
 			select {
-			case err := <-fs.E:
+			case <-ctx.Done():
+				return
+			case err, ok := <-fs.E:
+				if !ok {
+					return
+				}
 				log.Fatalln(err)
-			case frame := <-fs.C:
+			case frame, ok := <-fs.C:
+				if !ok {
+					return
+				}
 				saveImage("output.png", frame)
 			}
 		}
 	}()
 	go fs.Start()
 
-	buf := bufio.NewReader(os.Stdin)
-	fmt.Println("Press return to exit")
-	_, _ = buf.ReadBytes('\n') // block for user input
-
+	<-ctx.Done()
 	fs.Stop()
-	os.Exit(0)
 }
 
 func saveImage(filename string, img *image.RGBA) error {
