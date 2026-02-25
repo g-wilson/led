@@ -1,6 +1,7 @@
 package darksky
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -128,8 +129,8 @@ func New(apiKey string, client *http.Client) *Client {
 	}
 }
 
-func (c *Client) GetTwoDayWeatherAtLocation(lat, lon string) (weather.TwoDayWeather, error) {
-	resp, err := c.getDailyWeather(lat, lon)
+func (c *Client) GetTwoDayWeatherAtLocation(ctx context.Context, lat, lon string) (weather.TwoDayWeather, error) {
+	resp, err := c.getDailyWeather(ctx, lat, lon)
 	if err != nil {
 		return weather.TwoDayWeather{}, err
 	}
@@ -140,8 +141,8 @@ func (c *Client) GetTwoDayWeatherAtLocation(lat, lon string) (weather.TwoDayWeat
 	}, nil
 }
 
-func (c *Client) getForecast(path string, params *url.Values) (f *Forecast, err error) {
-	req, err := http.NewRequest("GET", "https://api.darksky.net/forecast/"+c.apiKey+path, nil)
+func (c *Client) getForecast(ctx context.Context, path string, params *url.Values) (f *Forecast, err error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.darksky.net/forecast/"+c.apiKey+path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -181,8 +182,8 @@ func (c *Client) getForecast(path string, params *url.Values) (f *Forecast, err 
 }
 
 //nolint:staticcheck
-func (c *Client) getCurrentWeather(lat, lon string) (cw CurrentWeather, err error) {
-	f, err := c.getForecast("/"+lat+","+lon, &url.Values{
+func (c *Client) getCurrentWeather(ctx context.Context, lat, lon string) (cw CurrentWeather, err error) {
+	f, err := c.getForecast(ctx, "/"+lat+","+lon, &url.Values{
 		"exclude": {"minutely,hourly,daily,alerts,flags"},
 		"units":   {"uk2"},
 	})
@@ -194,8 +195,8 @@ func (c *Client) getCurrentWeather(lat, lon string) (cw CurrentWeather, err erro
 }
 
 //nolint:staticcheck
-func (c *Client) getHourlyWeather(lat, lon string) (hw HourlyWeather, err error) {
-	f, err := c.getForecast("/"+lat+","+lon, &url.Values{
+func (c *Client) getHourlyWeather(ctx context.Context, lat, lon string) (hw HourlyWeather, err error) {
+	f, err := c.getForecast(ctx, "/"+lat+","+lon, &url.Values{
 		"exclude": {"currently,minutely,daily,alerts,flags"},
 		"units":   {"uk2"},
 	})
@@ -206,8 +207,8 @@ func (c *Client) getHourlyWeather(lat, lon string) (hw HourlyWeather, err error)
 	return f.Hourly, nil
 }
 
-func (c *Client) getDailyWeather(lat, lon string) (dw DailyWeather, err error) {
-	f, err := c.getForecast("/"+lat+","+lon, &url.Values{
+func (c *Client) getDailyWeather(ctx context.Context, lat, lon string) (dw DailyWeather, err error) {
+	f, err := c.getForecast(ctx, "/"+lat+","+lon, &url.Values{
 		"exclude": {"currently,minutely,hourly,alerts,flags"},
 		"units":   {"uk2"},
 	})

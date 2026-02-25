@@ -1,6 +1,7 @@
 package hasensors
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -34,15 +35,20 @@ type SensorState struct {
 	LastUpdated  string
 }
 
-const refreshInterval = 1 * time.Minute
+const (
+	refreshInterval    = 1 * time.Minute
+	fetchAreasTimeout  = 15 * time.Second
+	populateCacheTimeout = 30 * time.Second
+)
 
 // StateProvider abstracts the Home Assistant API client.
 type StateProvider interface {
-	GetState(entityID string) (homeassistant.StateResponse, error)
-	RunTemplateAreaSensors() ([]homeassistant.AreaSensorsResponse, error)
+	GetState(ctx context.Context, entityID string) (homeassistant.StateResponse, error)
+	RunTemplateAreaSensors(ctx context.Context) ([]homeassistant.AreaSensorsResponse, error)
 }
 
 type Agent struct {
+	ctx       context.Context
 	client    StateProvider
 	entityIDs []string
 
@@ -51,12 +57,13 @@ type Agent struct {
 	areas   []homeassistant.AreaSensorsResponse
 }
 
-func New(client StateProvider, entityIDs []string) (*Agent, error) {
+func New(ctx context.Context, client StateProvider, entityIDs []string) (*Agent, error) {
 	if len(entityIDs) == 0 {
 		return nil, fmt.Errorf("at least one entity ID is required")
 	}
 
 	a := &Agent{
+		ctx:       ctx,
 		client:    client,
 		entityIDs: entityIDs,
 		sensors:   make(map[string]SensorState),
@@ -67,8 +74,14 @@ func New(client StateProvider, entityIDs []string) (*Agent, error) {
 
 	go func() {
 		ticker := time.NewTicker(refreshInterval)
-		for range ticker.C {
-			a.populateCache()
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				a.populateCache()
+			}
 		}
 	}()
 
@@ -78,10 +91,13 @@ func New(client StateProvider, entityIDs []string) (*Agent, error) {
 func (a *Agent) populateCache() {
 	log.Println("fetching HA sensors")
 
+	ctx, cancel := context.WithTimeout(a.ctx, populateCacheTimeout)
+	defer cancel()
+
 	for _, entityID := range a.entityIDs {
-		resp, err := a.client.GetState(entityID)
+		resp, err := a.client.GetState(ctx, entityID)
 		if err != nil {
-			log.Println(fmt.Errorf("error fetching HA sensor %s: %w", entityID, err))
+			log.Printf("error fetching HA sensor %s: %v", entityID, err)
 			continue
 		}
 
@@ -148,9 +164,12 @@ func (a *Agent) GetArea(area string) (AreaSensors, bool) {
 func (a *Agent) fetchAreas() {
 	log.Println("fetching HA area groupings")
 
-	allAreas, err := a.client.RunTemplateAreaSensors()
+	ctx, cancel := context.WithTimeout(a.ctx, fetchAreasTimeout)
+	defer cancel()
+
+	allAreas, err := a.client.RunTemplateAreaSensors(ctx)
 	if err != nil {
-		log.Println(fmt.Errorf("error fetching HA areas: %w", err))
+		log.Printf("error fetching HA areas: %v", err)
 		return
 	}
 
@@ -188,12 +207,14 @@ func (a *Agent) fetchAreas() {
 		if assigned[id] {
 			validIDs = append(validIDs, id)
 		} else {
-			log.Println(fmt.Errorf("HA sensor %s not found in any area, skipping", id))
+			log.Printf("HA sensor %s not found in any area, skipping", id)
 		}
 	}
 
+	a.mu.Lock()
 	a.areas = filtered
 	a.entityIDs = validIDs
+	a.mu.Unlock()
 }
 
 // metaAttributes are attribute keys that are excluded from the Measurements

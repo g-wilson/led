@@ -1,6 +1,7 @@
 package clock
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/g-wilson/led/internal/calendar"
@@ -38,12 +40,12 @@ type ClockRenderer struct {
 	sensors      *hasensors.Agent
 	location     *time.Location
 	pages        []page
-	currentPage  int
+	currentPage  atomic.Int32
 	pageInterval time.Duration
 	debug        bool
 }
 
-func New() (*ClockRenderer, error) {
+func New(ctx context.Context) (*ClockRenderer, error) {
 	err := godotenv.Load()
 	if err != nil {
 		return nil, fmt.Errorf("error loading .env file: %w", err)
@@ -67,7 +69,7 @@ func New() (*ClockRenderer, error) {
 
 	tomorrowIoClient := tomorrowio.New(tomorrowIoAPIKey, nil)
 	weatherRefresh, _ := strconv.ParseInt(os.Getenv("WEATHER_REFRESH"), 10, 32)
-	weatherAgent, err := weather.New(tomorrowIoClient, weather.AgentOptions{
+	weatherAgent, err := weather.New(ctx, tomorrowIoClient, weather.AgentOptions{
 		Refresh:   int(weatherRefresh),
 		Latitude:  os.Getenv("WEATHER_LATITUDE"),
 		Longitude: os.Getenv("WEATHER_LONGITUDE"),
@@ -76,7 +78,7 @@ func New() (*ClockRenderer, error) {
 		return nil, fmt.Errorf("error initiating weather agent: %w", err)
 	}
 
-	diagAgent, err := diagnostics.New()
+	diagAgent, err := diagnostics.New(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error initiating diagnostics agent: %w", err)
 	}
@@ -91,7 +93,6 @@ func New() (*ClockRenderer, error) {
 		weather:      weatherAgent,
 		diagnostics:  diagAgent,
 		location:     location,
-		currentPage:  0,
 		pageInterval: 5 * time.Second,
 		debug:        os.Getenv("DEBUG") == "true",
 	}
@@ -108,17 +109,17 @@ func New() (*ClockRenderer, error) {
 	// Phase 2: dynamic area pages (skipped entirely if HA env vars not set)
 	haURL := os.Getenv("HA_URL")
 	haToken := os.Getenv("HA_TOKEN")
-	haEntityIDs := strings.Split(os.Getenv("HA_SENSORS"), ",")
+	haSensorsEnv := os.Getenv("HA_SENSORS")
 
-	if haURL != "" && haToken != "" && len(haEntityIDs) > 0 {
+	if haURL != "" && haToken != "" && haSensorsEnv != "" {
+		haEntityIDs := strings.Split(haSensorsEnv, ",")
 		haClient := homeassistant.New(haURL, haToken, nil)
-		sensorsAgent, err := hasensors.New(haClient, haEntityIDs)
+		sensorsAgent, err := hasensors.New(ctx, haClient, haEntityIDs)
 		if err != nil {
 			log.Printf("sensors agent unavailable, skipping area pages: %v", err)
 		} else {
 			r.sensors = sensorsAgent
 			for _, areaName := range sensorsAgent.GetAreas() {
-				areaName := areaName
 				r.pages = append(r.pages, func(c *image.RGBA) error {
 					return r.renderArea(c, areaName)
 				})
@@ -126,7 +127,7 @@ func New() (*ClockRenderer, error) {
 		}
 	}
 
-	r.startPageIterator()
+	r.startPageIterator(ctx)
 
 	return r, nil
 }
@@ -145,7 +146,7 @@ func (r *ClockRenderer) DrawFrame(c *image.RGBA) error {
 	// all pages - clock
 	r.addText(c, image.Point{X: 0, Y: -1}, r.getTimeString(), color.RGBA{200, 200, 200, 255})
 
-	return r.pages[r.currentPage](c)
+	return r.pages[r.currentPage.Load()](c)
 }
 
 func (r *ClockRenderer) renderToday(c *image.RGBA) error {
@@ -216,17 +217,22 @@ func (r *ClockRenderer) getTimeString() string {
 
 // startPageIterator kicks off a goroutine ticking continuously through
 // the length of the pages array, updating the current page each time
-func (r *ClockRenderer) startPageIterator() {
+func (r *ClockRenderer) startPageIterator(ctx context.Context) {
 	go func() {
-		i := 0
+		i := int32(0)
 		ticker := time.NewTicker(r.pageInterval)
-		for range ticker.C {
-			i += 1
-			if i > (len(r.pages) - 1) {
-				i = 0
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				i++
+				if int(i) > len(r.pages)-1 {
+					i = 0
+				}
+				r.currentPage.Store(i)
 			}
-
-			r.currentPage = i
 		}
 	}()
 }

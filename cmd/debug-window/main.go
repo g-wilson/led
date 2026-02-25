@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"image"
 	"log"
 	"os"
+	"os/signal"
 	"runtime"
 	"strconv"
+	"syscall"
 
 	"github.com/g-wilson/led/clock"
 	"github.com/g-wilson/led/internal/framestreamer"
@@ -39,7 +42,10 @@ func main() {
 	defer glfw.Terminate()
 
 	// Create clock renderer
-	clockApp, err := clock.New()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	clockApp, err := clock.New(ctx)
 	if err != nil {
 		log.Fatalln(err)
 	}

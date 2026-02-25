@@ -2,11 +2,13 @@ package homeassistant
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -45,13 +47,13 @@ const areaSensorsTemplate = `
 {{ ns.result | to_json }}
 `
 
-func (c *Client) RunTemplateAreaSensors() ([]AreaSensorsResponse, error) {
+func (c *Client) RunTemplateAreaSensors(ctx context.Context) ([]AreaSensorsResponse, error) {
 	payload, err := json.Marshal(map[string]string{"template": areaSensorsTemplate})
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/template", c.baseURL), bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("%s/api/template", c.baseURL), bytes.NewReader(payload))
 	if err != nil {
 		return nil, err
 	}
@@ -89,8 +91,8 @@ func (c *Client) RunTemplateAreaSensors() ([]AreaSensorsResponse, error) {
 	return areas, nil
 }
 
-func (c *Client) GetState(entityID string) (StateResponse, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/states/%s", c.baseURL, entityID), nil)
+func (c *Client) GetState(ctx context.Context, entityID string) (StateResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/api/states/%s", c.baseURL, url.PathEscape(entityID)), nil)
 	if err != nil {
 		return StateResponse{}, err
 	}

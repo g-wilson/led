@@ -1,6 +1,7 @@
 package tomorrowio
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,8 +31,8 @@ func New(apiKey string, client *http.Client) *Client {
 	}
 }
 
-func (c *Client) GetTwoDayWeatherAtLocation(lat, lon string) (weather.TwoDayWeather, error) {
-	resp, err := c.getForecast(&url.Values{
+func (c *Client) GetTwoDayWeatherAtLocation(ctx context.Context, lat, lon string) (weather.TwoDayWeather, error) {
+	resp, err := c.getForecast(ctx, &url.Values{
 		"location":  []string{fmt.Sprintf("%s,%s", lat, lon)},
 		"fields":    []string{"core"},
 		"units":     []string{"metric"},
@@ -48,8 +49,8 @@ func (c *Client) GetTwoDayWeatherAtLocation(lat, lon string) (weather.TwoDayWeat
 	}, nil
 }
 
-func (c *Client) getForecast(params *url.Values) (f *ForecastResponse, err error) {
-	req, err := http.NewRequest("GET", "https://api.tomorrow.io/v4/weather/forecast", nil)
+func (c *Client) getForecast(ctx context.Context, params *url.Values) (f *ForecastResponse, err error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.tomorrow.io/v4/weather/forecast", nil)
 	if err != nil {
 		return nil, err
 	}
