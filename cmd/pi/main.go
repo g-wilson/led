@@ -66,9 +66,17 @@ func main() {
 	go func() {
 		for {
 			select {
-			case err := <-fs.E:
+			case <-ctx.Done():
+				return
+			case err, ok := <-fs.E:
+				if !ok {
+					return
+				}
 				log.Fatalln(err)
-			case frame := <-fs.C:
+			case frame, ok := <-fs.C:
+				if !ok {
+					return
+				}
 				draw.Draw(c, c.Bounds(), frame, image.Point{}, draw.Src)
 				c.Render()
 			}

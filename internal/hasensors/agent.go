@@ -74,8 +74,14 @@ func New(ctx context.Context, client StateProvider, entityIDs []string) (*Agent,
 
 	go func() {
 		ticker := time.NewTicker(refreshInterval)
-		for range ticker.C {
-			a.populateCache()
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				a.populateCache()
+			}
 		}
 	}()
 
