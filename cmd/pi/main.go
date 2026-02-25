@@ -1,15 +1,15 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
 	"log"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 
 	"github.com/g-wilson/led/clock"
 	"github.com/g-wilson/led/internal/framestreamer"
@@ -49,7 +49,10 @@ func main() {
 	c := rgbmatrix.NewCanvas(m)
 	draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
 
-	clockApp, err := clock.New(context.Background())
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	clockApp, err := clock.New(ctx)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -73,10 +76,6 @@ func main() {
 	}()
 	go fs.Start()
 
-	buf := bufio.NewReader(os.Stdin)
-	fmt.Println("Press return to exit")
-	_, _ = buf.ReadBytes('\n') // block for user input
-
+	<-ctx.Done()
 	fs.Stop()
-	os.Exit(0)
 }
