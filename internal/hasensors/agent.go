@@ -35,7 +35,11 @@ type SensorState struct {
 	LastUpdated  string
 }
 
-const refreshInterval = 1 * time.Minute
+const (
+	refreshInterval    = 1 * time.Minute
+	fetchAreasTimeout  = 15 * time.Second
+	populateCacheTimeout = 30 * time.Second
+)
 
 // StateProvider abstracts the Home Assistant API client.
 type StateProvider interface {
@@ -81,8 +85,11 @@ func New(ctx context.Context, client StateProvider, entityIDs []string) (*Agent,
 func (a *Agent) populateCache() {
 	log.Println("fetching HA sensors")
 
+	ctx, cancel := context.WithTimeout(a.ctx, populateCacheTimeout)
+	defer cancel()
+
 	for _, entityID := range a.entityIDs {
-		resp, err := a.client.GetState(a.ctx, entityID)
+		resp, err := a.client.GetState(ctx, entityID)
 		if err != nil {
 			log.Printf("error fetching HA sensor %s: %v", entityID, err)
 			continue
@@ -151,7 +158,10 @@ func (a *Agent) GetArea(area string) (AreaSensors, bool) {
 func (a *Agent) fetchAreas() {
 	log.Println("fetching HA area groupings")
 
-	allAreas, err := a.client.RunTemplateAreaSensors(a.ctx)
+	ctx, cancel := context.WithTimeout(a.ctx, fetchAreasTimeout)
+	defer cancel()
+
+	allAreas, err := a.client.RunTemplateAreaSensors(ctx)
 	if err != nil {
 		log.Printf("error fetching HA areas: %v", err)
 		return
