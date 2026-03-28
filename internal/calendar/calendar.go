@@ -25,9 +25,6 @@ var f1ImageSource []byte
 //go:embed events.yaml
 var defaultEventsYAML []byte
 
-//go:embed f1.yaml
-var f1YAML []byte
-
 var builtinImages map[string]image.Image
 
 var sortedEvents eventList
@@ -85,12 +82,7 @@ func Load() error {
 		return fmt.Errorf("calendar: failed to parse embedded events.yaml: %w", err)
 	}
 
-	f1Events, err := loadYAMLBytes(f1YAML, "")
-	if err != nil {
-		return fmt.Errorf("calendar: failed to parse embedded f1.yaml: %w", err)
-	}
-
-	all := append(defaults, f1Events...)
+	all := defaults
 
 	for _, path := range splitPaths(os.Getenv("CALENDAR_FILES")) {
 		data, err := os.ReadFile(path)
