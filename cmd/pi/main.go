@@ -6,42 +6,31 @@ import (
 	"image/color"
 	"image/draw"
 	"log"
-	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 
 	"github.com/g-wilson/led/clock"
+	"github.com/g-wilson/led/config"
 	"github.com/g-wilson/led/internal/framestreamer"
 
-	"github.com/joho/godotenv"
 	rgbmatrix "github.com/mcuadros/go-rpi-rgb-led-matrix"
 )
 
-func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-}
-
 func main() {
-	config := &rgbmatrix.DefaultConfig
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalln(err)
+	}
 
-	rows, _ := strconv.ParseInt(os.Getenv("LED_ROWS"), 10, 32)
-	cols, _ := strconv.ParseInt(os.Getenv("LED_COLS"), 10, 32)
-	pwmb, _ := strconv.ParseInt(os.Getenv("LED_PWM_BITS"), 10, 32)
-	pwmlsb, _ := strconv.ParseInt(os.Getenv("LED_PWM_LSB"), 10, 32)
-	brt, _ := strconv.ParseInt(os.Getenv("LED_BRIGHTNESS"), 10, 32)
+	matrixConfig := &rgbmatrix.DefaultConfig
+	matrixConfig.Rows = cfg.LEDRows
+	matrixConfig.Cols = cfg.LEDCols
+	matrixConfig.PWMBits = cfg.LEDPWMBits
+	matrixConfig.PWMLSBNanoseconds = cfg.LEDPWMLSBNano
+	matrixConfig.Brightness = cfg.LEDBrightness
+	matrixConfig.HardwareMapping = cfg.LEDHardware
 
-	config.Rows = int(rows)
-	config.Cols = int(cols)
-	config.PWMBits = int(pwmb)
-	config.PWMLSBNanoseconds = int(pwmlsb)
-	config.Brightness = int(brt)
-	config.HardwareMapping = os.Getenv("LED_HARDWARE")
-
-	m, err := rgbmatrix.NewRGBLedMatrix(config)
+	m, err := rgbmatrix.NewRGBLedMatrix(matrixConfig)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -52,7 +41,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	clockApp, err := clock.New(ctx)
+	clockApp, err := clock.New(ctx, cfg)
 	if err != nil {
 		log.Fatalln(err)
 	}

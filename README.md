@@ -36,6 +36,7 @@ LED_HARDWARE=adafruit-hat
 
 # General
 DEBUG=false
+TIMEZONE=Europe/London
 
 # Calendar (optional) — comma-separated list of YAML files to load at runtime
 CALENDAR_FILES=/path/to/my-events.yaml,/path/to/led/calendars/f1.yaml
