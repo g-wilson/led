@@ -4,18 +4,15 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"image"
 	"image/color"
 	_ "image/png"
 	"log"
-	"os"
-	"strconv"
-	"strings"
 	"sync/atomic"
 	"time"
 
+	"github.com/g-wilson/led/config"
 	"github.com/g-wilson/led/internal/calendar"
 	"github.com/g-wilson/led/internal/diagnostics"
 	"github.com/g-wilson/led/internal/hasensors"
@@ -23,7 +20,6 @@ import (
 	"github.com/g-wilson/led/internal/tomorrowio"
 	"github.com/g-wilson/led/internal/weather"
 
-	"github.com/joho/godotenv"
 	"github.com/toelsiba/fopix"
 	"golang.org/x/image/draw"
 )
@@ -45,18 +41,13 @@ type ClockRenderer struct {
 	debug        bool
 }
 
-func New(ctx context.Context) (*ClockRenderer, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return nil, fmt.Errorf("error loading .env file: %w", err)
-	}
-
-	if err := calendar.Load(); err != nil {
+func New(ctx context.Context, cfg *config.Settings) (*ClockRenderer, error) {
+	if err := calendar.Load(cfg.CalendarFiles); err != nil {
 		return nil, fmt.Errorf("error loading calendar: %w", err)
 	}
 
 	fontInfo := fopix.FontInfo{}
-	err = json.Unmarshal(fontSource, &fontInfo)
+	err := json.Unmarshal(fontSource, &fontInfo)
 	if err != nil {
 		return nil, fmt.Errorf("error loading font info file: %w", err)
 	}
@@ -66,17 +57,11 @@ func New(ctx context.Context) (*ClockRenderer, error) {
 	}
 	font.SetScale(1)
 
-	tomorrowIoAPIKey := os.Getenv("TOMORROWIO_API_KEY")
-	if len(tomorrowIoAPIKey) == 0 {
-		return nil, errors.New("environment variable TOMORROWIO_API_KEY is required")
-	}
-
-	tomorrowIoClient := tomorrowio.New(tomorrowIoAPIKey, nil)
-	weatherRefresh, _ := strconv.ParseInt(os.Getenv("WEATHER_REFRESH"), 10, 32)
+	tomorrowIoClient := tomorrowio.New(cfg.TomorrowIOAPIKey, nil)
 	weatherAgent, err := weather.New(ctx, tomorrowIoClient, weather.AgentOptions{
-		Refresh:   int(weatherRefresh),
-		Latitude:  os.Getenv("WEATHER_LATITUDE"),
-		Longitude: os.Getenv("WEATHER_LONGITUDE"),
+		Refresh:   cfg.WeatherRefresh,
+		Latitude:  cfg.WeatherLatitude,
+		Longitude: cfg.WeatherLongitude,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error initiating weather agent: %w", err)
@@ -87,11 +72,7 @@ func New(ctx context.Context) (*ClockRenderer, error) {
 		return nil, fmt.Errorf("error initiating diagnostics agent: %w", err)
 	}
 
-	timezone := os.Getenv("TIMEZONE")
-	if timezone == "" {
-		timezone = "Europe/London"
-	}
-	location, err := time.LoadLocation(timezone)
+	location, err := time.LoadLocation(cfg.Timezone)
 	if err != nil {
 		return nil, fmt.Errorf("cannot determine timezone: %w", err)
 	}
@@ -102,7 +83,7 @@ func New(ctx context.Context) (*ClockRenderer, error) {
 		diagnostics:  diagAgent,
 		location:     location,
 		pageInterval: 5 * time.Second,
-		debug:        os.Getenv("DEBUG") == "true",
+		debug:        cfg.Debug,
 	}
 
 	// Phase 1: static pages
@@ -114,15 +95,10 @@ func New(ctx context.Context) (*ClockRenderer, error) {
 		r.renderDiag,
 	}
 
-	// Phase 2: dynamic area pages (skipped entirely if HA env vars not set)
-	haURL := os.Getenv("HA_URL")
-	haToken := os.Getenv("HA_TOKEN")
-	haSensorsEnv := os.Getenv("HA_SENSORS")
-
-	if haURL != "" && haToken != "" && haSensorsEnv != "" {
-		haEntityIDs := strings.Split(haSensorsEnv, ",")
-		haClient := homeassistant.New(haURL, haToken, nil)
-		sensorsAgent, err := hasensors.New(ctx, haClient, haEntityIDs)
+	// Phase 2: dynamic area pages (skipped entirely if HA settings not provided)
+	if cfg.HAURL != "" && cfg.HAToken != "" && len(cfg.HASensors) > 0 {
+		haClient := homeassistant.New(cfg.HAURL, cfg.HAToken, nil)
+		sensorsAgent, err := hasensors.New(ctx, haClient, cfg.HASensors)
 		if err != nil {
 			log.Printf("sensors agent unavailable, skipping area pages: %v", err)
 		} else {

@@ -13,6 +13,7 @@ require (
 
 require (
 	github.com/BurntSushi/xgb v0.0.0-20210121224620-deaf085860bc // indirect
+	github.com/caarlos0/env/v11 v11.4.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	golang.org/x/exp v0.0.0-20190301171323-01c40f57f5f6 // indirect

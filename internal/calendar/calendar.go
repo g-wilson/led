@@ -53,10 +53,8 @@ func (s eventList) Less(i, j int) bool {
 }
 
 // Load initialises the calendar. It parses the embedded default event files
-// and any additional YAML files listed in the CALENDAR_FILES environment
-// variable (comma-separated paths). Call this after loading environment
-// variables (e.g. via godotenv).
-func Load() error {
+// and any additional YAML files provided in the files slice.
+func Load(files []string) error {
 	f1Img, _, err := image.Decode(bytes.NewReader(f1ImageSource))
 	if err != nil {
 		return fmt.Errorf("calendar: failed to decode builtin f1 image: %w", err)
@@ -79,7 +77,7 @@ func Load() error {
 
 	all := defaults
 
-	for _, path := range splitPaths(os.Getenv("CALENDAR_FILES")) {
+	for _, path := range files {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			log.Printf("calendar: skipping file %q: %v", path, err)
@@ -181,15 +179,3 @@ func resolveImage(ref string, dir string) image.Image {
 	return img
 }
 
-func splitPaths(env string) []string {
-	if env == "" {
-		return nil
-	}
-	var paths []string
-	for _, p := range strings.Split(env, ",") {
-		if p = strings.TrimSpace(p); p != "" {
-			paths = append(paths, p)
-		}
-	}
-	return paths
-}
