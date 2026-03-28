@@ -87,7 +87,11 @@ func New(ctx context.Context) (*ClockRenderer, error) {
 		return nil, fmt.Errorf("error initiating diagnostics agent: %w", err)
 	}
 
-	location, err := time.LoadLocation("Europe/London")
+	timezone := os.Getenv("TIMEZONE")
+	if timezone == "" {
+		timezone = "Europe/London"
+	}
+	location, err := time.LoadLocation(timezone)
 	if err != nil {
 		return nil, fmt.Errorf("cannot determine timezone: %w", err)
 	}
