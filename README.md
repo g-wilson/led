@@ -37,15 +37,15 @@ LED_HARDWARE=adafruit-hat
 # General
 DEBUG=false
 
-# Calendar (optional) — colon-separated list of YAML files to load at runtime
-CALENDAR_FILES=/path/to/my-events.yaml:/path/to/work-calendar.yaml
+# Calendar (optional) — comma-separated list of YAML files to load at runtime
+CALENDAR_FILES=/path/to/my-events.yaml,/path/to/led/calendars/f1.yaml
 ```
 
-### Custom Calendars
+### Calendars
 
-Calendar events are defined in YAML files. The repo ships with `internal/calendar/events.yaml` (holidays etc.) and `internal/calendar/f1.yaml` (F1 season), both embedded in the binary.
+Calendar events are defined in YAML files. The repo ships with `calendars/events.yaml` (holidays) embedded in the binary as the default. `calendars/f1.yaml` (F1 season) is also in the repo but must be opted into via `CALENDAR_FILES`.
 
-You can supply additional YAML files at runtime via `CALENDAR_FILES` in `.env`. These files are not committed to the repo, making them suitable for personal or private events.
+You can supply any number of YAML files at runtime via `CALENDAR_FILES` in `.env`. This makes it easy to add personal or private events that are not committed to the repo.
 
 **YAML format:**
 

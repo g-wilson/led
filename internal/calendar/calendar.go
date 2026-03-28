@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/g-wilson/led/calendars"
 	"gopkg.in/yaml.v3"
 )
 
@@ -21,9 +22,6 @@ var xmasImageSource []byte
 
 //go:embed images/f1.png
 var f1ImageSource []byte
-
-//go:embed events.yaml
-var defaultEventsYAML []byte
 
 var builtinImages map[string]image.Image
 
@@ -77,7 +75,7 @@ func Load() error {
 		"xmastree": xmasImg,
 	}
 
-	defaults, err := loadYAMLBytes(defaultEventsYAML, "")
+	defaults, err := loadYAMLBytes(calendars.EventsYAML, "")
 	if err != nil {
 		return fmt.Errorf("calendar: failed to parse embedded events.yaml: %w", err)
 	}
@@ -193,7 +191,7 @@ func splitPaths(env string) []string {
 		return nil
 	}
 	var paths []string
-	for _, p := range strings.Split(env, ":") {
+	for _, p := range strings.Split(env, ",") {
 		if p = strings.TrimSpace(p); p != "" {
 			paths = append(paths, p)
 		}
