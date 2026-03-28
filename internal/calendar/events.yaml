@@ -1,0 +1,11 @@
+events:
+  - name: Eurovision
+    time: "2026-05-16T19:00:00Z" # Eurovision Song Contest
+
+  - name: XMAS
+    time: "2026-12-25T00:00:00Z" # Christmas
+    image: builtin:xmastree
+
+  - name: "2027"
+    time: "2027-01-01T00:00:00Z" # New Year
+    image: builtin:xmastree

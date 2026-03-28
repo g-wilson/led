@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/g-wilson/led/internal/calendar"
 	"github.com/g-wilson/led/internal/diagnostics"
 	"github.com/g-wilson/led/internal/hasensors"
 	"github.com/g-wilson/led/internal/homeassistant"
@@ -49,6 +50,8 @@ func New(ctx context.Context) (*ClockRenderer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error loading .env file: %w", err)
 	}
+
+	calendar.Load()
 
 	fontInfo := fopix.FontInfo{}
 	err = json.Unmarshal(fontSource, &fontInfo)
