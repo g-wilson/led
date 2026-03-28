@@ -51,7 +51,7 @@ func New(ctx context.Context) (*ClockRenderer, error) {
 		return nil, fmt.Errorf("error loading .env file: %w", err)
 	}
 
-	if err = calendar.Load(); err != nil {
+	if err := calendar.Load(); err != nil {
 		return nil, fmt.Errorf("error loading calendar: %w", err)
 	}
 

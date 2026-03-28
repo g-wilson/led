@@ -30,12 +30,12 @@ var sortedEvents eventList
 type Event struct {
 	Name      string
 	Timestamp string
+	StartsAt  time.Time
 	Image     image.Image
 }
 
 func (e *Event) Until() time.Duration {
-	startsAt, _ := time.Parse(time.RFC3339, e.Timestamp)
-	return time.Until(startsAt)
+	return time.Until(e.StartsAt)
 }
 
 type eventList []Event
@@ -49,15 +49,12 @@ func (s eventList) Swap(i, j int) {
 }
 
 func (s eventList) Less(i, j int) bool {
-	iStartsAt, _ := time.Parse(time.RFC3339, s[i].Timestamp)
-	jStartsAt, _ := time.Parse(time.RFC3339, s[j].Timestamp)
-
-	return iStartsAt.Before(jStartsAt)
+	return s[i].StartsAt.Before(s[j].StartsAt)
 }
 
 // Load initialises the calendar. It parses the embedded default event files
 // and any additional YAML files listed in the CALENDAR_FILES environment
-// variable (colon-separated paths). Call this after loading environment
+// variable (comma-separated paths). Call this after loading environment
 // variables (e.g. via godotenv).
 func Load() error {
 	f1Img, _, err := image.Decode(bytes.NewReader(f1ImageSource))
@@ -105,14 +102,10 @@ func Load() error {
 }
 
 func GetNextEvent() *Event {
-	for _, r := range sortedEvents {
-		until := r.Until()
-
-		if until.Seconds() < 0 {
-			continue
+	for i := range sortedEvents {
+		if sortedEvents[i].Until().Seconds() >= 0 {
+			return &sortedEvents[i]
 		}
-
-		return &r
 	}
 
 	return nil
@@ -136,7 +129,8 @@ func loadYAMLBytes(data []byte, dir string) (eventList, error) {
 
 	result := make(eventList, 0, len(f.Events))
 	for _, ye := range f.Events {
-		if _, err := time.Parse(time.RFC3339, ye.Time); err != nil {
+		startsAt, err := time.Parse(time.RFC3339, ye.Time)
+		if err != nil {
 			log.Printf("calendar: skipping event %q: invalid time %q: %v", ye.Name, ye.Time, err)
 			continue
 		}
@@ -144,6 +138,7 @@ func loadYAMLBytes(data []byte, dir string) (eventList, error) {
 		result = append(result, Event{
 			Name:      ye.Name,
 			Timestamp: ye.Time,
+			StartsAt:  startsAt,
 			Image:     resolveImage(ye.Image, dir),
 		})
 	}
