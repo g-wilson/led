@@ -51,7 +51,9 @@ func New(ctx context.Context) (*ClockRenderer, error) {
 		return nil, fmt.Errorf("error loading .env file: %w", err)
 	}
 
-	calendar.Load()
+	if err = calendar.Load(); err != nil {
+		return nil, fmt.Errorf("error loading calendar: %w", err)
+	}
 
 	fontInfo := fopix.FontInfo{}
 	err = json.Unmarshal(fontSource, &fontInfo)

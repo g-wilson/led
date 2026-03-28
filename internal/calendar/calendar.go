@@ -28,19 +28,9 @@ var defaultEventsYAML []byte
 //go:embed f1.yaml
 var f1YAML []byte
 
-var builtinImages = map[string]image.Image{
-	"f1":       mustLoadImage(f1ImageSource),
-	"xmastree": mustLoadImage(xmasImageSource),
-}
+var builtinImages map[string]image.Image
 
-func mustLoadImage(src []byte) image.Image {
-	img, _, err := image.Decode(bytes.NewReader(src))
-	if err != nil {
-		panic(fmt.Errorf("error loading image: %w", err))
-	}
-
-	return img
-}
+var sortedEvents eventList
 
 type Event struct {
 	Name      string
@@ -70,40 +60,39 @@ func (s eventList) Less(i, j int) bool {
 	return iStartsAt.Before(jStartsAt)
 }
 
-var sortedEvents eventList
+// Load initialises the calendar. It parses the embedded default event files
+// and any additional YAML files listed in the CALENDAR_FILES environment
+// variable (colon-separated paths). Call this after loading environment
+// variables (e.g. via godotenv).
+func Load() error {
+	f1Img, _, err := image.Decode(bytes.NewReader(f1ImageSource))
+	if err != nil {
+		return fmt.Errorf("calendar: failed to decode builtin f1 image: %w", err)
+	}
 
-func init() {
+	xmasImg, _, err := image.Decode(bytes.NewReader(xmasImageSource))
+	if err != nil {
+		return fmt.Errorf("calendar: failed to decode builtin xmastree image: %w", err)
+	}
+
+	builtinImages = map[string]image.Image{
+		"f1":       f1Img,
+		"xmastree": xmasImg,
+	}
+
 	defaults, err := loadYAMLBytes(defaultEventsYAML, "")
 	if err != nil {
-		panic(fmt.Errorf("calendar: failed to parse embedded events.yaml: %w", err))
+		return fmt.Errorf("calendar: failed to parse embedded events.yaml: %w", err)
 	}
 
 	f1Events, err := loadYAMLBytes(f1YAML, "")
 	if err != nil {
-		panic(fmt.Errorf("calendar: failed to parse embedded f1.yaml: %w", err))
+		return fmt.Errorf("calendar: failed to parse embedded f1.yaml: %w", err)
 	}
 
 	all := append(defaults, f1Events...)
-	sort.Sort(eventList(all))
-	sortedEvents = all
-}
 
-// Load reads additional calendar YAML files from the CALENDAR_FILES environment
-// variable (colon-separated paths) and merges them with the default events.
-// Call this after loading environment variables (e.g. via godotenv).
-func Load() {
-	calFiles := os.Getenv("CALENDAR_FILES")
-	if calFiles == "" {
-		return
-	}
-
-	extra := eventList{}
-	for _, path := range strings.Split(calFiles, ":") {
-		path = strings.TrimSpace(path)
-		if path == "" {
-			continue
-		}
-
+	for _, path := range splitPaths(os.Getenv("CALENDAR_FILES")) {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			log.Printf("calendar: skipping file %q: %v", path, err)
@@ -116,16 +105,13 @@ func Load() {
 			continue
 		}
 
-		extra = append(extra, events...)
+		all = append(all, events...)
 	}
 
-	if len(extra) == 0 {
-		return
-	}
-
-	all := append(sortedEvents, extra...)
 	sort.Sort(eventList(all))
 	sortedEvents = all
+
+	return nil
 }
 
 func GetNextEvent() *Event {
@@ -190,7 +176,6 @@ func resolveImage(ref string, dir string) image.Image {
 		return img
 	}
 
-	// treat as file path
 	if !filepath.IsAbs(ref) && dir != "" {
 		ref = filepath.Join(dir, ref)
 	}
@@ -209,4 +194,17 @@ func resolveImage(ref string, dir string) image.Image {
 	}
 
 	return img
+}
+
+func splitPaths(env string) []string {
+	if env == "" {
+		return nil
+	}
+	var paths []string
+	for _, p := range strings.Split(env, ":") {
+		if p = strings.TrimSpace(p); p != "" {
+			paths = append(paths, p)
+		}
+	}
+	return paths
 }
