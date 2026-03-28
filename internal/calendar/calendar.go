@@ -6,36 +6,36 @@ import (
 	"fmt"
 	"image"
 	_ "image/png"
+	"log"
+	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 	"time"
+
+	"github.com/g-wilson/led/calendars"
+	"gopkg.in/yaml.v3"
 )
 
 //go:embed images/xmastree.png
 var xmasImageSource []byte
-var xmasImage = mustLoadImage(xmasImageSource)
 
 //go:embed images/f1.png
 var f1ImageSource []byte
-var f1Image = mustLoadImage(f1ImageSource)
 
-func mustLoadImage(src []byte) image.Image {
-	img, _, err := image.Decode(bytes.NewReader(src))
-	if err != nil {
-		panic(fmt.Errorf("error loading image: %w", err))
-	}
+var builtinImages map[string]image.Image
 
-	return img
-}
+var sortedEvents eventList
 
 type Event struct {
 	Name      string
 	Timestamp string
+	StartsAt  time.Time
 	Image     image.Image
 }
 
 func (e *Event) Until() time.Duration {
-	startsAt, _ := time.Parse(time.RFC3339, e.Timestamp)
-	return time.Until(startsAt)
+	return time.Until(e.StartsAt)
 }
 
 type eventList []Event
@@ -49,30 +49,147 @@ func (s eventList) Swap(i, j int) {
 }
 
 func (s eventList) Less(i, j int) bool {
-	iStartsAt, _ := time.Parse(time.RFC3339, s[i].Timestamp)
-	jStartsAt, _ := time.Parse(time.RFC3339, s[j].Timestamp)
-
-	return iStartsAt.Before(jStartsAt)
+	return s[i].StartsAt.Before(s[j].StartsAt)
 }
 
-var sortedEvents = (func() eventList {
-	e := append(eventList{}, events...)
+// Load initialises the calendar. It parses the embedded default event files
+// and any additional YAML files listed in the CALENDAR_FILES environment
+// variable (comma-separated paths). Call this after loading environment
+// variables (e.g. via godotenv).
+func Load() error {
+	f1Img, _, err := image.Decode(bytes.NewReader(f1ImageSource))
+	if err != nil {
+		return fmt.Errorf("calendar: failed to decode builtin f1 image: %w", err)
+	}
 
-	sort.Sort(e)
+	xmasImg, _, err := image.Decode(bytes.NewReader(xmasImageSource))
+	if err != nil {
+		return fmt.Errorf("calendar: failed to decode builtin xmastree image: %w", err)
+	}
 
-	return e
-})()
+	builtinImages = map[string]image.Image{
+		"f1":       f1Img,
+		"xmastree": xmasImg,
+	}
 
-func GetNextEvent() *Event {
-	for _, r := range sortedEvents {
-		until := r.Until()
+	defaults, err := loadYAMLBytes(calendars.EventsYAML, "")
+	if err != nil {
+		return fmt.Errorf("calendar: failed to parse embedded events.yaml: %w", err)
+	}
 
-		if until.Seconds() < 0 {
+	all := defaults
+
+	for _, path := range splitPaths(os.Getenv("CALENDAR_FILES")) {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			log.Printf("calendar: skipping file %q: %v", path, err)
 			continue
 		}
 
-		return &r
+		events, err := loadYAMLBytes(data, filepath.Dir(path))
+		if err != nil {
+			log.Printf("calendar: skipping file %q: invalid YAML: %v", path, err)
+			continue
+		}
+
+		all = append(all, events...)
+	}
+
+	sort.Sort(eventList(all))
+	sortedEvents = all
+
+	return nil
+}
+
+func GetNextEvent() *Event {
+	for i := range sortedEvents {
+		if sortedEvents[i].Until().Seconds() >= 0 {
+			return &sortedEvents[i]
+		}
 	}
 
 	return nil
+}
+
+type yamlFile struct {
+	Events []yamlEvent `yaml:"events"`
+}
+
+type yamlEvent struct {
+	Name  string `yaml:"name"`
+	Time  string `yaml:"time"`
+	Image string `yaml:"image"`
+}
+
+func loadYAMLBytes(data []byte, dir string) (eventList, error) {
+	var f yamlFile
+	if err := yaml.Unmarshal(data, &f); err != nil {
+		return nil, err
+	}
+
+	result := make(eventList, 0, len(f.Events))
+	for _, ye := range f.Events {
+		startsAt, err := time.Parse(time.RFC3339, ye.Time)
+		if err != nil {
+			log.Printf("calendar: skipping event %q: invalid time %q: %v", ye.Name, ye.Time, err)
+			continue
+		}
+
+		result = append(result, Event{
+			Name:      ye.Name,
+			Timestamp: ye.Time,
+			StartsAt:  startsAt,
+			Image:     resolveImage(ye.Image, dir),
+		})
+	}
+
+	return result, nil
+}
+
+func resolveImage(ref string, dir string) image.Image {
+	if ref == "" {
+		return nil
+	}
+
+	if strings.HasPrefix(ref, "builtin:") {
+		alias := strings.TrimPrefix(ref, "builtin:")
+		img, ok := builtinImages[alias]
+		if !ok {
+			log.Printf("calendar: unknown builtin image %q", alias)
+			return nil
+		}
+		return img
+	}
+
+	if !filepath.IsAbs(ref) && dir != "" {
+		ref = filepath.Join(dir, ref)
+	}
+
+	f, err := os.Open(ref)
+	if err != nil {
+		log.Printf("calendar: cannot open image %q: %v", ref, err)
+		return nil
+	}
+	defer f.Close()
+
+	img, _, err := image.Decode(f)
+	if err != nil {
+		log.Printf("calendar: cannot decode image %q: %v", ref, err)
+		return nil
+	}
+
+	return img
+}
+
+func splitPaths(env string) []string {
+	if env == "" {
+		return nil
+	}
+	var paths []string
+	for _, p := range strings.Split(env, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			paths = append(paths, p)
+		}
+	}
+	return paths
 }
