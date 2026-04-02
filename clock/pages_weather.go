@@ -24,10 +24,10 @@ func (r *ClockRenderer) renderTomorrow(c *image.RGBA) error {
 }
 
 var (
-	colourSunrise  = huegradient.Gradient{BaseHue: 80, Step: 0}.Color(0)  // warm golden yellow
-	colourSunset   = huegradient.Gradient{BaseHue: 30, Step: 0}.Color(0)  // warm amber-orange
-	colourMoonrise = huegradient.Gradient{BaseHue: 240, Step: 0}.Color(0) // cool blue
-	colourMoonset  = huegradient.Gradient{BaseHue: 280, Step: 0}.Color(0) // cool blue-violet
+	colourSunrise  = huegradient.Gradient{BaseHue: 80}.Color(0)  // warm golden yellow
+	colourSunset   = huegradient.Gradient{BaseHue: 30}.Color(0)  // warm amber-orange
+	colourMoonrise = huegradient.Gradient{BaseHue: 240}.Color(0) // cool blue
+	colourMoonset  = huegradient.Gradient{BaseHue: 280}.Color(0) // cool blue-violet
 )
 
 func (r *ClockRenderer) renderDaylight(c *image.RGBA) error {
