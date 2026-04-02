@@ -15,6 +15,8 @@ type DayWeather struct {
 	TemperatureLow  float32
 	SunriseTime     time.Time
 	SunsetTime      time.Time
+	MoonriseTime    time.Time
+	MoonsetTime     time.Time
 	Rainy           bool
 	Windy           bool
 	Cloudy          bool
