@@ -32,19 +32,20 @@ var (
 
 func (r *ClockRenderer) renderDaylight(c *image.RGBA) error {
 	w := r.weather.GetToday()
+	xOffset := 2
 
 	sunrise := w.SunriseTime.In(r.location).Format("15:04")
 	sunset := w.SunsetTime.In(r.location).Format("15:04")
-	r.addText(c, image.Point{X: 0, Y: 8}, fmt.Sprintf("Sunrise %s", sunrise), colourSunrise)
-	r.addText(c, image.Point{X: 0, Y: 14}, fmt.Sprintf("Sunset  %s", sunset), colourSunset)
+	r.addText(c, image.Point{X: xOffset, Y: 8}, fmt.Sprintf(" Sunrise %s", sunrise), colourSunrise)
+	r.addText(c, image.Point{X: xOffset, Y: 14}, fmt.Sprintf("  Sunset %s", sunset), colourSunset)
 
 	if !w.MoonriseTime.IsZero() {
 		moonrise := w.MoonriseTime.In(r.location).Format("15:04")
-		r.addText(c, image.Point{X: 0, Y: 20}, fmt.Sprintf("Moonrise %s", moonrise), colourMoonrise)
+		r.addText(c, image.Point{X: xOffset, Y: 20}, fmt.Sprintf("Moonrise %s", moonrise), colourMoonrise)
 	}
 	if !w.MoonsetTime.IsZero() {
 		moonset := w.MoonsetTime.In(r.location).Format("15:04")
-		r.addText(c, image.Point{X: 0, Y: 26}, fmt.Sprintf("Moonset  %s", moonset), colourMoonset)
+		r.addText(c, image.Point{X: xOffset, Y: 26}, fmt.Sprintf(" Moonset %s", moonset), colourMoonset)
 	}
 
 	return nil

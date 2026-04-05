@@ -83,10 +83,10 @@ func (r *ClockRenderer) renderMoon(c *image.RGBA) error {
 	illum, waxing := moonPhaseIllumination(time.Now())
 	name := moonPhaseName(illum, waxing)
 
-	drawMoonDisc(c, image.Point{X: 32, Y: 19}, 7, illum, waxing)
+	drawMoonDisc(c, image.Point{X: 32, Y: 15}, 9, illum, waxing)
 
 	centreX := 32 - (4*len(name))/2
-	r.addText(c, image.Point{X: centreX, Y: 29}, name, colourMoon)
+	r.addText(c, image.Point{X: centreX, Y: 26}, name, colourMoon)
 
 	return nil
 }
