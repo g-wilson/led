@@ -91,6 +91,7 @@ func New(ctx context.Context, cfg *config.Settings) (*ClockRenderer, error) {
 		r.renderToday,
 		r.renderTomorrow,
 		r.renderDaylight,
+		r.renderMoon,
 		r.renderCountdown,
 		r.renderDiag,
 	}

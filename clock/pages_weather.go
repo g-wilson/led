@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 
+	"github.com/g-wilson/led/internal/huegradient"
 	"github.com/g-wilson/led/internal/weather"
 )
 
@@ -22,12 +23,31 @@ func (r *ClockRenderer) renderTomorrow(c *image.RGBA) error {
 	return nil
 }
 
+var (
+	colourSunrise  = huegradient.Gradient{BaseHue: 80}.Color(0)  // warm golden yellow
+	colourSunset   = huegradient.Gradient{BaseHue: 30}.Color(0)  // warm amber-orange
+	colourMoonrise = huegradient.Gradient{BaseHue: 240}.Color(0) // cool blue
+	colourMoonset  = huegradient.Gradient{BaseHue: 280}.Color(0) // cool blue-violet
+)
+
 func (r *ClockRenderer) renderDaylight(c *image.RGBA) error {
 	w := r.weather.GetToday()
-	sunrise := w.SunriseTime.UTC().In(r.location).Format("15:04")
-	sunset := w.SunsetTime.UTC().In(r.location).Format("15:04")
-	r.addText(c, image.Point{X: 4, Y: 10}, fmt.Sprintf("Sunrise %s", sunrise), color.RGBA{152, 168, 27, 255})
-	r.addText(c, image.Point{X: 8, Y: 18}, fmt.Sprintf("Sunset %s", sunset), color.RGBA{194, 27, 27, 255})
+	xOffset := 2
+
+	sunrise := w.SunriseTime.In(r.location).Format("15:04")
+	sunset := w.SunsetTime.In(r.location).Format("15:04")
+	r.addText(c, image.Point{X: xOffset, Y: 8}, fmt.Sprintf(" Sunrise %s", sunrise), colourSunrise)
+	r.addText(c, image.Point{X: xOffset, Y: 14}, fmt.Sprintf("  Sunset %s", sunset), colourSunset)
+
+	if !w.MoonriseTime.IsZero() {
+		moonrise := w.MoonriseTime.In(r.location).Format("15:04")
+		r.addText(c, image.Point{X: xOffset, Y: 20}, fmt.Sprintf("Moonrise %s", moonrise), colourMoonrise)
+	}
+	if !w.MoonsetTime.IsZero() {
+		moonset := w.MoonsetTime.In(r.location).Format("15:04")
+		r.addText(c, image.Point{X: xOffset, Y: 26}, fmt.Sprintf(" Moonset %s", moonset), colourMoonset)
+	}
+
 	return nil
 }
 

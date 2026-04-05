@@ -16,6 +16,8 @@ require (
 	github.com/caarlos0/env/v11 v11.4.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
+	github.com/soniakeys/meeus/v3 v3.0.1 // indirect
+	github.com/soniakeys/unit v1.0.0 // indirect
 	golang.org/x/exp v0.0.0-20190301171323-01c40f57f5f6 // indirect
 	golang.org/x/mobile v0.0.0-20190302063618-b8c6dab863a6 // indirect
 	golang.org/x/sys v0.1.0 // indirect

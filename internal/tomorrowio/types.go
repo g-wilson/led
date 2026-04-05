@@ -132,6 +132,8 @@ func (d Values) ToDomain() weather.DayWeather {
 		TemperatureLow:  float32(d.TemperatureMin),
 		SunriseTime:     d.SunriseTime,
 		SunsetTime:      d.SunsetTime,
+		MoonriseTime:    d.MoonriseTime,
+		MoonsetTime:     d.MoonsetTime,
 		Rainy:           d.PrecipitationProbabilityAvg > 25,
 		Windy:           d.WindSpeedAvg > 6 || d.WindGustAvg > 12,
 		Cloudy:          d.CloudCoverAvg > 80,

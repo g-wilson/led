@@ -17,6 +17,11 @@ github.com/lucasb-eyer/go-colorful v1.3.0 h1:2/yBRLdWBZKrf7gB40FoiKfAWYQ0lqNcbuQ
 github.com/lucasb-eyer/go-colorful v1.3.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/mcuadros/go-rpi-rgb-led-matrix v0.0.0-20180401002551-b26063b3169a h1:LW0Q1rpZM0IvF0VsC8f1FrmHxG9UZrAY/jF6W+iZBo4=
 github.com/mcuadros/go-rpi-rgb-led-matrix v0.0.0-20180401002551-b26063b3169a/go.mod h1:6p7/C4Toq+GhRHIR7gmxjiNYRYYwh9zQeVJa/xmbqLU=
+github.com/soniakeys/meeus/v3 v3.0.1 h1:inZIhWUeyumGoQ//CCZMI4qR2vPKCS6LbVPca2mDvqE=
+github.com/soniakeys/meeus/v3 v3.0.1/go.mod h1:G1tkqa+QcOyErSe7WqN0OnzVeLrvq9bQBoNb1IG+3n8=
+github.com/soniakeys/sexagesimal v1.0.0/go.mod h1:/7psACvkUx/IZ1XX3HDdBci1Lz1ZObcjLX2MVVKI3rM=
+github.com/soniakeys/unit v1.0.0 h1:UMIgu6dxDQaK6tYaQV6dJn5oovB6035KRxCS0O7Jiec=
+github.com/soniakeys/unit v1.0.0/go.mod h1:z93o2tO/hJA2+Wr1Fozkt3jK4LyDwTfRCjyRFLAa4zk=
 github.com/toelsiba/fopix v0.0.0-20210114151512-ed880dcce00d h1:9I5tYQcUAH58Qopu9NbUolh6rTAa/uZUm38ywvNCPAw=
 github.com/toelsiba/fopix v0.0.0-20210114151512-ed880dcce00d/go.mod h1:/atAwnnhAmnjdOslj7TNBen9M4b6XADH5cJNiZ1G+q4=
 golang.org/x/exp v0.0.0-20190301171323-01c40f57f5f6 h1:75bC0RF0WtaWl7tKKq99XxDxjYTu0d4iy6yh7TcErbk=
