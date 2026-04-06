@@ -33,6 +33,25 @@ const (
 	PingLevelRed
 )
 
+// Pinger abstracts the network probe used for connectivity checks.
+type Pinger interface {
+	Ping(ctx context.Context, addr string) (time.Duration, error)
+}
+
+// NetPinger is the production Pinger implementation using a TCP dial.
+type NetPinger struct{}
+
+func (NetPinger) Ping(ctx context.Context, addr string) (time.Duration, error) {
+	start := time.Now()
+	dialer := net.Dialer{Timeout: pingTimeout}
+	conn, err := dialer.DialContext(ctx, pingNetwork, addr)
+	if err != nil {
+		return 0, err
+	}
+	conn.Close()
+	return time.Since(start), nil
+}
+
 type Status struct {
 	LastHealthyAt time.Time
 	LastPing      time.Duration
@@ -65,6 +84,7 @@ func (s Status) IsStale(now time.Time) bool {
 }
 
 type Agent struct {
+	pinger        Pinger
 	mu            sync.RWMutex
 	lastHealthyAt time.Time
 	lastPing      time.Duration
@@ -72,8 +92,8 @@ type Agent struct {
 	lastCheckedAt time.Time
 }
 
-func New(ctx context.Context) (*Agent, error) {
-	a := &Agent{}
+func New(ctx context.Context, pinger Pinger) (*Agent, error) {
+	a := &Agent{pinger: pinger}
 	a.checkOnce(ctx)
 
 	go func() {
@@ -105,10 +125,7 @@ func (a *Agent) GetStatus() Status {
 }
 
 func (a *Agent) checkOnce(ctx context.Context) {
-	start := time.Now()
-	dialer := net.Dialer{Timeout: pingTimeout}
-	conn, err := dialer.DialContext(ctx, pingNetwork, pingAddress)
-	elapsed := time.Since(start)
+	elapsed, err := a.pinger.Ping(ctx, pingAddress)
 
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -120,7 +137,6 @@ func (a *Agent) checkOnce(ctx context.Context) {
 		log.Println(fmt.Errorf("diagnostics ping failed: %w", err))
 		return
 	}
-	_ = conn.Close()
 
 	a.lastPingOk = true
 	a.lastPing = elapsed

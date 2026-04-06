@@ -8,7 +8,6 @@ import (
 	"image"
 	"image/color"
 	_ "image/png"
-	"log"
 	"sync/atomic"
 	"time"
 
@@ -16,8 +15,6 @@ import (
 	"github.com/g-wilson/led/internal/calendar"
 	"github.com/g-wilson/led/internal/diagnostics"
 	"github.com/g-wilson/led/internal/hasensors"
-	"github.com/g-wilson/led/internal/homeassistant"
-	"github.com/g-wilson/led/internal/tomorrowio"
 	"github.com/g-wilson/led/internal/weather"
 
 	"github.com/toelsiba/fopix"
@@ -33,25 +30,32 @@ type page struct {
 }
 
 type ClockRenderer struct {
-	font         *fopix.Drawer
-	weather      *weather.Agent
-	diagnostics  *diagnostics.Agent
-	sensors      *hasensors.Agent
-	location     *time.Location
-	pages        []page
-	currentPage  atomic.Int32
+	font        *fopix.Drawer
+	weather     *weather.Agent
+	diagnostics *diagnostics.Agent
+	sensors     *hasensors.Agent
+	calendar    *calendar.Agent
+	location    *time.Location
+	pages       []page
+	currentPage atomic.Int32
 	pageInterval time.Duration
-	debug        bool
+	debug       bool
 }
 
-func New(ctx context.Context, cfg *config.Settings) (*ClockRenderer, error) {
-	if err := calendar.Load(cfg.CalendarFiles); err != nil {
-		return nil, fmt.Errorf("error loading calendar: %w", err)
-	}
-
+// New creates a ClockRenderer. All agent dependencies must be fully initialised
+// before being passed in; New does no network I/O itself.
+//
+// sensors may be nil, in which case area pages are omitted.
+func New(
+	ctx context.Context,
+	cfg *config.Settings,
+	weatherAgent *weather.Agent,
+	diagAgent *diagnostics.Agent,
+	sensorsAgent *hasensors.Agent,
+	calendarAgent *calendar.Agent,
+) (*ClockRenderer, error) {
 	fontInfo := fopix.FontInfo{}
-	err := json.Unmarshal(fontSource, &fontInfo)
-	if err != nil {
+	if err := json.Unmarshal(fontSource, &fontInfo); err != nil {
 		return nil, fmt.Errorf("error loading font info file: %w", err)
 	}
 	font, err := fopix.NewDrawer(fontInfo)
@@ -59,21 +63,6 @@ func New(ctx context.Context, cfg *config.Settings) (*ClockRenderer, error) {
 		return nil, fmt.Errorf("error creating font drawer: %w", err)
 	}
 	font.SetScale(1)
-
-	tomorrowIoClient := tomorrowio.New(cfg.TomorrowIOAPIKey, nil)
-	weatherAgent, err := weather.New(ctx, tomorrowIoClient, weather.AgentOptions{
-		Refresh:   cfg.WeatherRefresh,
-		Latitude:  cfg.WeatherLatitude,
-		Longitude: cfg.WeatherLongitude,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error initiating weather agent: %w", err)
-	}
-
-	diagAgent, err := diagnostics.New(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error initiating diagnostics agent: %w", err)
-	}
 
 	location, err := time.LoadLocation(cfg.Timezone)
 	if err != nil {
@@ -84,6 +73,8 @@ func New(ctx context.Context, cfg *config.Settings) (*ClockRenderer, error) {
 		font:         font,
 		weather:      weatherAgent,
 		diagnostics:  diagAgent,
+		sensors:      sensorsAgent,
+		calendar:     calendarAgent,
 		location:     location,
 		pageInterval: 5 * time.Second,
 		debug:        cfg.Debug,
@@ -99,22 +90,15 @@ func New(ctx context.Context, cfg *config.Settings) (*ClockRenderer, error) {
 		{name: "diag", fn: r.renderDiag},
 	}
 
-	// Phase 2: dynamic area pages (skipped entirely if HA settings not provided)
-	if cfg.HAURL != "" && cfg.HAToken != "" && len(cfg.HASensors) > 0 {
-		haClient := homeassistant.New(cfg.HAURL, cfg.HAToken, nil)
-		sensorsAgent, err := hasensors.New(ctx, haClient, cfg.HASensors)
-		if err != nil {
-			log.Printf("sensors agent unavailable, skipping area pages: %v", err)
-		} else {
-			r.sensors = sensorsAgent
-			for _, areaName := range sensorsAgent.GetAreas() {
-				r.pages = append(r.pages, page{
-					name: "area-" + areaName,
-					fn: func(c *image.RGBA) error {
-						return r.renderArea(c, areaName)
-					},
-				})
-			}
+	// Phase 2: dynamic area pages (only if sensors agent was provided)
+	if sensorsAgent != nil {
+		for _, areaName := range sensorsAgent.GetAreas() {
+			r.pages = append(r.pages, page{
+				name: "area-" + areaName,
+				fn: func(c *image.RGBA) error {
+					return r.renderArea(c, areaName)
+				},
+			})
 		}
 	}
 
@@ -163,6 +147,29 @@ func (r *ClockRenderer) startPageIterator(ctx context.Context) {
 	}()
 }
 
+// PageNames returns the names of all registered pages in display order.
+func (r *ClockRenderer) PageNames() []string {
+	names := make([]string, len(r.pages))
+	for i, p := range r.pages {
+		names[i] = p.name
+	}
+	return names
+}
+
+// CaptureFrame renders the named page into the provided buffer and returns the
+// result. Unlike DrawFrame, it bypasses overnight blackout and page rotation
+// state, making it suitable for generating static snapshots during development.
+func (r *ClockRenderer) CaptureFrame(pageName string, c *image.RGBA) error {
+	for _, p := range r.pages {
+		if p.name == pageName {
+			draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
+			r.addText(c, image.Point{X: 0, Y: -1}, r.getTimeString(), color.RGBA{200, 200, 200, 255})
+			return p.fn(c)
+		}
+	}
+	return fmt.Errorf("unknown page: %q", pageName)
+}
+
 func (r *ClockRenderer) addText(c *image.RGBA, pos image.Point, text string, col color.RGBA) {
 	r.font.SetColor(col)
 	r.font.DrawText(c, pos, text)
@@ -197,29 +204,6 @@ func formatShortDuration(d time.Duration) string {
 	}
 
 	return fmt.Sprintf("%dd", int(d.Hours()/24))
-}
-
-// PageNames returns the names of all registered pages in display order.
-func (r *ClockRenderer) PageNames() []string {
-	names := make([]string, len(r.pages))
-	for i, p := range r.pages {
-		names[i] = p.name
-	}
-	return names
-}
-
-// CaptureFrame renders the named page into the provided buffer and returns the
-// result. Unlike DrawFrame, it bypasses overnight blackout and page rotation
-// state, making it suitable for generating static snapshots during development.
-func (r *ClockRenderer) CaptureFrame(pageName string, c *image.RGBA) error {
-	for _, p := range r.pages {
-		if p.name == pageName {
-			draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
-			r.addText(c, image.Point{X: 0, Y: -1}, r.getTimeString(), color.RGBA{200, 200, 200, 255})
-			return p.fn(c)
-		}
-	}
-	return fmt.Errorf("unknown page: %q", pageName)
 }
 
 func formatDuration(u time.Duration) string {
