@@ -27,7 +27,10 @@ import (
 //go:embed fonts/tom-thumb-new.json
 var fontSource []byte
 
-type page func(c *image.RGBA) error
+type page struct {
+	name string
+	fn   func(c *image.RGBA) error
+}
 
 type ClockRenderer struct {
 	font         *fopix.Drawer
@@ -88,12 +91,12 @@ func New(ctx context.Context, cfg *config.Settings) (*ClockRenderer, error) {
 
 	// Phase 1: static pages
 	r.pages = []page{
-		r.renderToday,
-		r.renderTomorrow,
-		r.renderDaylight,
-		r.renderMoon,
-		r.renderCountdown,
-		r.renderDiag,
+		{name: "today", fn: r.renderToday},
+		{name: "tomorrow", fn: r.renderTomorrow},
+		{name: "daylight", fn: r.renderDaylight},
+		{name: "moon", fn: r.renderMoon},
+		{name: "countdown", fn: r.renderCountdown},
+		{name: "diag", fn: r.renderDiag},
 	}
 
 	// Phase 2: dynamic area pages (skipped entirely if HA settings not provided)
@@ -105,8 +108,11 @@ func New(ctx context.Context, cfg *config.Settings) (*ClockRenderer, error) {
 		} else {
 			r.sensors = sensorsAgent
 			for _, areaName := range sensorsAgent.GetAreas() {
-				r.pages = append(r.pages, func(c *image.RGBA) error {
-					return r.renderArea(c, areaName)
+				r.pages = append(r.pages, page{
+					name: "area-" + areaName,
+					fn: func(c *image.RGBA) error {
+						return r.renderArea(c, areaName)
+					},
 				})
 			}
 		}
@@ -132,7 +138,7 @@ func (r *ClockRenderer) DrawFrame(c *image.RGBA) error {
 	r.addText(c, image.Point{X: 0, Y: -1}, r.getTimeString(), color.RGBA{200, 200, 200, 255})
 
 	// page content from the current page
-	return r.pages[r.currentPage.Load()](c)
+	return r.pages[r.currentPage.Load()].fn(c)
 }
 
 // startPageIterator kicks off a goroutine ticking continuously through
@@ -191,6 +197,29 @@ func formatShortDuration(d time.Duration) string {
 	}
 
 	return fmt.Sprintf("%dd", int(d.Hours()/24))
+}
+
+// PageNames returns the names of all registered pages in display order.
+func (r *ClockRenderer) PageNames() []string {
+	names := make([]string, len(r.pages))
+	for i, p := range r.pages {
+		names[i] = p.name
+	}
+	return names
+}
+
+// CaptureFrame renders the named page into the provided buffer and returns the
+// result. Unlike DrawFrame, it bypasses overnight blackout and page rotation
+// state, making it suitable for generating static snapshots during development.
+func (r *ClockRenderer) CaptureFrame(pageName string, c *image.RGBA) error {
+	for _, p := range r.pages {
+		if p.name == pageName {
+			draw.Draw(c, c.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
+			r.addText(c, image.Point{X: 0, Y: -1}, r.getTimeString(), color.RGBA{200, 200, 200, 255})
+			return p.fn(c)
+		}
+	}
+	return fmt.Errorf("unknown page: %q", pageName)
 }
 
 func formatDuration(u time.Duration) string {

@@ -2,16 +2,14 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"image"
 	"image/png"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/g-wilson/led/clock"
 	"github.com/g-wilson/led/config"
-	"github.com/g-wilson/led/internal/framestreamer"
 )
 
 func main() {
@@ -25,42 +23,26 @@ func main() {
 		Max: image.Point{X: cfg.LEDCols, Y: cfg.LEDRows},
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
-	clockApp, err := clock.New(ctx, cfg)
+	clockApp, err := clock.New(context.Background(), cfg)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	fs := framestreamer.New(framestreamer.Params{
-		Bounds:      bounds,
-		FrametimeMs: framestreamer.OneFPS,
-		Renderer:    clockApp,
-	})
+	if err := os.MkdirAll("frames", 0755); err != nil {
+		log.Fatalln(err)
+	}
 
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case err, ok := <-fs.E:
-				if !ok {
-					return
-				}
-				log.Fatalln(err)
-			case frame, ok := <-fs.C:
-				if !ok {
-					return
-				}
-				saveImage("output.png", frame)
-			}
+	for _, name := range clockApp.PageNames() {
+		buf := image.NewRGBA(bounds)
+		if err := clockApp.CaptureFrame(name, buf); err != nil {
+			log.Fatalf("error capturing page %q: %v", name, err)
 		}
-	}()
-	go fs.Start()
-
-	<-ctx.Done()
-	fs.Stop()
+		path := fmt.Sprintf("frames/page-%s.png", name)
+		if err := saveImage(path, buf); err != nil {
+			log.Fatalf("error saving page %q: %v", name, err)
+		}
+		log.Printf("saved %s", path)
+	}
 }
 
 func saveImage(filename string, img *image.RGBA) error {
@@ -68,12 +50,6 @@ func saveImage(filename string, img *image.RGBA) error {
 	if err != nil {
 		return err
 	}
-
 	defer f.Close()
-
-	if err := png.Encode(f, img); err != nil {
-		return err
-	}
-
-	return nil
+	return png.Encode(f, img)
 }
