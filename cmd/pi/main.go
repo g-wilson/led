@@ -11,6 +11,12 @@ import (
 
 	"github.com/g-wilson/led/clock"
 	"github.com/g-wilson/led/config"
+	"github.com/g-wilson/led/internal/calendar"
+	"github.com/g-wilson/led/internal/diagnostics"
+	"github.com/g-wilson/led/internal/hasensors"
+	"github.com/g-wilson/led/internal/homeassistant"
+	"github.com/g-wilson/led/internal/tomorrowio"
+	"github.com/g-wilson/led/internal/weather"
 	"github.com/g-wilson/led/internal/framestreamer"
 
 	rgbmatrix "github.com/mcuadros/go-rpi-rgb-led-matrix"
@@ -41,7 +47,37 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	clockApp, err := clock.New(ctx, cfg)
+	calLoader := calendar.NewFileLoader(cfg.CalendarFiles)
+	calAgent, err := calendar.New(calLoader)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	tioClient := tomorrowio.New(cfg.TomorrowIOAPIKey, nil)
+	weatherAgent, err := weather.New(ctx, tioClient, weather.AgentOptions{
+		Refresh:   cfg.WeatherRefresh,
+		Latitude:  cfg.WeatherLatitude,
+		Longitude: cfg.WeatherLongitude,
+	})
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	diagAgent, err := diagnostics.New(ctx, diagnostics.NetPinger{})
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	var sensorsAgent *hasensors.Agent
+	if cfg.HAURL != "" && cfg.HAToken != "" && len(cfg.HASensors) > 0 {
+		haClient := homeassistant.New(cfg.HAURL, cfg.HAToken, nil)
+		sensorsAgent, err = hasensors.New(ctx, haClient, cfg.HASensors)
+		if err != nil {
+			log.Printf("sensors agent unavailable, skipping area pages: %v", err)
+		}
+	}
+
+	clockApp, err := clock.New(ctx, cfg, weatherAgent, diagAgent, sensorsAgent, calAgent)
 	if err != nil {
 		log.Fatalln(err)
 	}

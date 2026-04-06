@@ -4,13 +4,11 @@ import (
 	"image"
 	"image/color"
 
-	"github.com/g-wilson/led/internal/calendar"
-
 	"golang.org/x/image/draw"
 )
 
 func (r *ClockRenderer) renderCountdown(c *image.RGBA) error {
-	if event := calendar.GetNextEvent(); event != nil {
+	if event := r.calendar.GetNextEvent(); event != nil {
 		if event.Image != nil {
 			draw.Draw(c, c.Bounds(), event.Image, image.Point{X: -44, Y: -9}, draw.Over)
 		}

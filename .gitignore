@@ -1,6 +1,6 @@
-output.png
 .env
 __debug_*
 /debug
 app
 calendars/private.yaml
+frames/

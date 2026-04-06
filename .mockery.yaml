@@ -1,0 +1,17 @@
+with-expecter: true
+resolve-type-alias: false
+disable-version-string: true
+issue-845-fix: true
+packages:
+  github.com/g-wilson/led/internal/weather:
+    interfaces:
+      DayWeatherProvider:
+  github.com/g-wilson/led/internal/hasensors:
+    interfaces:
+      StateProvider:
+  github.com/g-wilson/led/internal/diagnostics:
+    interfaces:
+      Pinger:
+  github.com/g-wilson/led/internal/calendar:
+    interfaces:
+      Loader:

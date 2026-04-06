@@ -10,6 +10,12 @@ import (
 
 	"github.com/g-wilson/led/clock"
 	"github.com/g-wilson/led/config"
+	"github.com/g-wilson/led/internal/calendar"
+	"github.com/g-wilson/led/internal/diagnostics"
+	"github.com/g-wilson/led/internal/hasensors"
+	"github.com/g-wilson/led/internal/homeassistant"
+	"github.com/g-wilson/led/internal/tomorrowio"
+	"github.com/g-wilson/led/internal/weather"
 	"github.com/g-wilson/led/internal/framestreamer"
 	"github.com/g-wilson/led/internal/windowrenderer"
 
@@ -32,16 +38,44 @@ func main() {
 	}
 	defer glfw.Terminate()
 
-	// Create clock renderer
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	clockApp, err := clock.New(ctx, cfg)
+	calLoader := calendar.NewFileLoader(cfg.CalendarFiles)
+	calAgent, err := calendar.New(calLoader)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	// Create framestreamer
+	tioClient := tomorrowio.New(cfg.TomorrowIOAPIKey, nil)
+	weatherAgent, err := weather.New(ctx, tioClient, weather.AgentOptions{
+		Refresh:   cfg.WeatherRefresh,
+		Latitude:  cfg.WeatherLatitude,
+		Longitude: cfg.WeatherLongitude,
+	})
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	diagAgent, err := diagnostics.New(ctx, diagnostics.NetPinger{})
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	var sensorsAgent *hasensors.Agent
+	if cfg.HAURL != "" && cfg.HAToken != "" && len(cfg.HASensors) > 0 {
+		haClient := homeassistant.New(cfg.HAURL, cfg.HAToken, nil)
+		sensorsAgent, err = hasensors.New(ctx, haClient, cfg.HASensors)
+		if err != nil {
+			log.Printf("sensors agent unavailable, skipping area pages: %v", err)
+		}
+	}
+
+	clockApp, err := clock.New(ctx, cfg, weatherAgent, diagAgent, sensorsAgent, calAgent)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	fs := framestreamer.New(framestreamer.Params{
 		Bounds: image.Rectangle{
 			Min: image.Point{X: 0, Y: 0},
@@ -51,19 +85,15 @@ func main() {
 		Renderer:    clockApp,
 	})
 
-	// Create window renderer with direct channel access to framestreamer
 	renderer, err := windowrenderer.New("LED Matrix Debug", cfg.LEDRows, cfg.LEDCols, fs.C, fs.E)
 	if err != nil {
 		log.Fatalln("failed to create window renderer:", err)
 	}
 	defer renderer.Cleanup()
 
-	// Start framestreamer - calls the clock app to render frames at the given framerate
 	go fs.Start()
 	defer fs.Stop()
 
-	// Main render loop - processes frames on main thread
-	// No intermediate goroutine needed - renderer reads directly from framestreamer channels
 	if err := renderer.Run(); err != nil {
 		log.Fatalln("renderer error:", err)
 	}
