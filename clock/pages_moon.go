@@ -6,12 +6,13 @@ import (
 	"math"
 	"time"
 
-	"github.com/g-wilson/led/internal/huegradient"
 	"github.com/soniakeys/meeus/v3/julian"
 	"github.com/soniakeys/meeus/v3/moonillum"
 )
 
-var colourMoon = huegradient.Gradient{BaseHue: 240}.Color(0) // cool blue
+var colourMoon = color.RGBA{50, 50, 70, 255}
+var litColour = color.RGBA{210, 215, 230, 255}
+var darkColour = color.RGBA{25, 25, 45, 255}
 
 func moonPhaseIllumination(t time.Time) (illum float64, waxing bool) {
 	jde := julian.TimeToJD(t)
@@ -48,9 +49,6 @@ func moonPhaseName(illum float64, waxing bool) string {
 }
 
 func drawMoonDisc(c *image.RGBA, centre image.Point, radius int, illum float64, waxing bool) {
-	litColour := color.RGBA{210, 215, 230, 255}
-	darkColour := color.RGBA{25, 25, 45, 255}
-
 	r2 := radius * radius
 	for dy := -radius; dy <= radius; dy++ {
 		hw := math.Sqrt(float64(r2 - dy*dy))
@@ -79,11 +77,13 @@ func drawMoonDisc(c *image.RGBA, centre image.Point, radius int, illum float64, 
 	}
 }
 
+var _ page = (*ClockRenderer)(nil).renderMoon
+
 func (r *ClockRenderer) renderMoon(c *image.RGBA) error {
 	illum, waxing := moonPhaseIllumination(time.Now())
 	name := moonPhaseName(illum, waxing)
 
-	drawMoonDisc(c, image.Point{X: 32, Y: 15}, 9, illum, waxing)
+	drawMoonDisc(c, image.Point{X: 32, Y: 16}, 9, illum, waxing)
 
 	centreX := 32 - (4*len(name))/2
 	r.addText(c, image.Point{X: centreX, Y: 26}, name, colourMoon)
