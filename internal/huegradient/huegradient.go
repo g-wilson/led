@@ -16,6 +16,10 @@ type Gradient struct {
 
 // Color returns the Oklch-derived RGBA colour for iteration i.
 func (g Gradient) Color(i int) color.RGBA {
+	if g.Step == 0 {
+		g.Step = 25
+	}
+
 	hue := math.Mod(g.BaseHue+float64(i)*g.Step, 360)
 	c := colorful.OkLch(0.75, 0.12, hue).Clamped()
 	return color.RGBA{uint8(c.R * 255), uint8(c.G * 255), uint8(c.B * 255), 255}

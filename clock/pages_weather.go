@@ -24,10 +24,8 @@ func (r *ClockRenderer) renderTomorrow(c *image.RGBA) error {
 }
 
 var (
-	colourSunrise  = huegradient.Gradient{BaseHue: 80}.Color(0)  // warm golden yellow
-	colourSunset   = huegradient.Gradient{BaseHue: 30}.Color(0)  // warm amber-orange
-	colourMoonrise = huegradient.Gradient{BaseHue: 240}.Color(0) // cool blue
-	colourMoonset  = huegradient.Gradient{BaseHue: 280}.Color(0) // cool blue-violet
+	colourSunGradient  = huegradient.Gradient{BaseHue: 40, Step: 40}
+	colourMoonGradient = huegradient.Gradient{BaseHue: 280, Step: 40}
 )
 
 func (r *ClockRenderer) renderDaylight(c *image.RGBA) error {
@@ -36,16 +34,16 @@ func (r *ClockRenderer) renderDaylight(c *image.RGBA) error {
 
 	sunrise := w.SunriseTime.In(r.location).Format("15:04")
 	sunset := w.SunsetTime.In(r.location).Format("15:04")
-	r.addText(c, image.Point{X: xOffset, Y: 8}, fmt.Sprintf(" Sunrise %s", sunrise), colourSunrise)
-	r.addText(c, image.Point{X: xOffset, Y: 14}, fmt.Sprintf("  Sunset %s", sunset), colourSunset)
+	r.addText(c, image.Point{X: xOffset, Y: 8}, fmt.Sprintf(" Sunrise %s", sunrise), colourSunGradient.Color(0))
+	r.addText(c, image.Point{X: xOffset, Y: 14}, fmt.Sprintf("  Sunset %s", sunset), colourSunGradient.Color(1))
 
 	if !w.MoonriseTime.IsZero() {
 		moonrise := w.MoonriseTime.In(r.location).Format("15:04")
-		r.addText(c, image.Point{X: xOffset, Y: 20}, fmt.Sprintf("Moonrise %s", moonrise), colourMoonrise)
+		r.addText(c, image.Point{X: xOffset, Y: 20}, fmt.Sprintf("Moonrise %s", moonrise), colourMoonGradient.Color(0))
 	}
 	if !w.MoonsetTime.IsZero() {
 		moonset := w.MoonsetTime.In(r.location).Format("15:04")
-		r.addText(c, image.Point{X: xOffset, Y: 26}, fmt.Sprintf(" Moonset %s", moonset), colourMoonset)
+		r.addText(c, image.Point{X: xOffset, Y: 26}, fmt.Sprintf(" Moonset %s", moonset), colourMoonGradient.Color(1))
 	}
 
 	return nil
