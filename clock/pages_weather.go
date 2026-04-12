@@ -9,30 +9,33 @@ import (
 	"github.com/g-wilson/led/internal/weather"
 )
 
-var _ page = (*ClockRenderer)(nil).renderToday
-
-func (r *ClockRenderer) renderToday(c *image.RGBA) error {
-	w := r.weather.GetToday()
-	r.addText(c, image.Point{X: 0, Y: 8}, "Today", color.RGBA{215, 0, 88, 255})
-	r.renderWeather(c, w)
-	return nil
-}
-
-var _ page = (*ClockRenderer)(nil).renderTomorrow
-
-func (r *ClockRenderer) renderTomorrow(c *image.RGBA) error {
-	w := r.weather.GetTomorrow()
-	r.addText(c, image.Point{X: 0, Y: 8}, "Tomorrow", color.RGBA{215, 0, 88, 255})
-	r.renderWeather(c, w)
-	return nil
-}
-
 var (
+	colourDayName = color.RGBA{215, 0, 88, 255}
+
+	colourTempLow  = huegradient.Gradient{BaseHue: 240}.Color(0)
+	colourTempHigh = huegradient.Gradient{BaseHue: 80}.Color(0)
+
 	colourSunGradient  = huegradient.Gradient{BaseHue: 40, Step: 40}
 	colourMoonGradient = huegradient.Gradient{BaseHue: 280, Step: 40}
 )
 
+var _ page = (*ClockRenderer)(nil).renderToday
+var _ page = (*ClockRenderer)(nil).renderTomorrow
 var _ page = (*ClockRenderer)(nil).renderDaylight
+
+func (r *ClockRenderer) renderToday(c *image.RGBA) error {
+	w := r.weather.GetToday()
+	r.addText(c, image.Point{X: 0, Y: 8}, "Today", colourDayName)
+	r.renderWeather(c, w)
+	return nil
+}
+
+func (r *ClockRenderer) renderTomorrow(c *image.RGBA) error {
+	w := r.weather.GetTomorrow()
+	r.addText(c, image.Point{X: 0, Y: 8}, "Tomorrow", colourDayName)
+	r.renderWeather(c, w)
+	return nil
+}
 
 func (r *ClockRenderer) renderDaylight(c *image.RGBA) error {
 	w := r.weather.GetToday()
@@ -59,8 +62,8 @@ func (r *ClockRenderer) renderWeather(c *image.RGBA, w weather.DayWeather) {
 	yOffset := 15
 	summaryStart := 36
 
-	r.addText(c, image.Point{X: 0, Y: yOffset}, fmt.Sprintf("%02.foC", w.TemperatureLow), color.RGBA{80, 80, 255, 255})
-	r.addText(c, image.Point{X: 17, Y: yOffset}, fmt.Sprintf("%02.foC", w.TemperatureHigh), color.RGBA{255, 150, 0, 255})
+	r.addText(c, image.Point{X: 0, Y: yOffset}, fmt.Sprintf("%02.foC", w.TemperatureLow), colourTempLow)
+	r.addText(c, image.Point{X: 17, Y: yOffset}, fmt.Sprintf("%02.foC", w.TemperatureHigh), colourTempHigh)
 
 	// Underneath temperatures, always shows
 	if w.Cloudy {

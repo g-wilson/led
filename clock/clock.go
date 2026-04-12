@@ -177,7 +177,7 @@ func (r *ClockRenderer) addText(c *image.RGBA, pos image.Point, text string, col
 }
 
 func (r *ClockRenderer) getTimeString() string {
-	return time.Now().UTC().In(r.location).Format("15:04 Mon Jan 2")
+	return time.Now().UTC().In(r.location).Format("15:04 Mon 2 Jan")
 }
 
 func (r *ClockRenderer) isCurrentlyOvernight() bool {

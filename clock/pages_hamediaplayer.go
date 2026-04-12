@@ -19,12 +19,13 @@ func (r *ClockRenderer) renderNowPlaying(c *image.RGBA) error {
 	player, ok := r.mediaPlayer.GetPlayingPlayer()
 
 	if !ok {
-		r.addText(c, image.Point{X: 0, Y: 12}, "Nothing playing", nowPlayingMuted)
+		r.addText(c, image.Point{X: 0, Y: 12}, ">Nothing playing", nowPlayingMuted)
 		return nil
 	}
 
-	r.addText(c, image.Point{X: 0, Y: 5}, "> "+truncateN(player.FriendlyName, 14), nowPlayingTitle)
+	r.addText(c, image.Point{X: 0, Y: 5}, ">>"+truncateN(player.FriendlyName, 14), nowPlayingTitle)
 	renderMediaInfo(r, c, player)
+
 	return nil
 }
 
@@ -33,10 +34,10 @@ func renderMediaInfo(r *ClockRenderer, c *image.RGBA, player hamediaplayer.Media
 		r.addText(c, image.Point{X: 0, Y: 12}, truncateN(player.MediaArtist, 16), mediaGradient.Color(0))
 	}
 	if player.MediaTitle != "" {
-		r.addText(c, image.Point{X: 0, Y: 18}, truncateN(player.MediaTitle, 16), mediaGradient.Color(1))
+		r.addText(c, image.Point{X: 0, Y: 19}, truncateN(player.MediaTitle, 16), mediaGradient.Color(1))
 	}
 	if player.MediaAlbum != "" {
-		r.addText(c, image.Point{X: 0, Y: 24}, truncateN(player.MediaAlbum, 16), mediaGradient.Color(2))
+		r.addText(c, image.Point{X: 0, Y: 25}, truncateN(player.MediaAlbum, 16), mediaGradient.Color(2))
 	}
 }
 
