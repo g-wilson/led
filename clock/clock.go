@@ -15,6 +15,7 @@ import (
 	"github.com/g-wilson/led/config"
 	"github.com/g-wilson/led/internal/calendar"
 	"github.com/g-wilson/led/internal/diagnostics"
+	"github.com/g-wilson/led/internal/hamediaplayer"
 	"github.com/g-wilson/led/internal/hasensors"
 	"github.com/g-wilson/led/internal/homeassistant"
 	"github.com/g-wilson/led/internal/tomorrowio"
@@ -30,15 +31,16 @@ var fontSource []byte
 type page func(c *image.RGBA) error
 
 type ClockRenderer struct {
-	font         *fopix.Drawer
-	weather      *weather.Agent
-	diagnostics  *diagnostics.Agent
-	sensors      *hasensors.Agent
-	location     *time.Location
-	pages        []page
-	currentPage  atomic.Int32
+	font        *fopix.Drawer
+	weather     *weather.Agent
+	diagnostics *diagnostics.Agent
+	sensors     *hasensors.Agent
+	mediaPlayer *hamediaplayer.Agent
+	location    *time.Location
+	pages       []page
+	currentPage atomic.Int32
 	pageInterval time.Duration
-	debug        bool
+	debug       bool
 }
 
 func New(ctx context.Context, cfg *config.Settings) (*ClockRenderer, error) {
@@ -109,6 +111,18 @@ func New(ctx context.Context, cfg *config.Settings) (*ClockRenderer, error) {
 					return r.renderArea(c, areaName)
 				})
 			}
+		}
+	}
+
+	// Phase 3: media player page (skipped if HA settings or player list not provided)
+	if cfg.HAURL != "" && cfg.HAToken != "" && len(cfg.HAMediaPlayers) > 0 {
+		haClient := homeassistant.New(cfg.HAURL, cfg.HAToken, nil)
+		mediaAgent, err := hamediaplayer.New(ctx, haClient, cfg.HAMediaPlayers)
+		if err != nil {
+			log.Printf("media player agent unavailable, skipping now playing page: %v", err)
+		} else {
+			r.mediaPlayer = mediaAgent
+			r.pages = append(r.pages, r.renderNowPlaying)
 		}
 	}
 

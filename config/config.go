@@ -28,9 +28,10 @@ type Settings struct {
 	LEDHardware   string `env:"LED_HARDWARE"   envDefault:"adafruit-hat"`
 
 	// Home Assistant (all optional — only used when all three are set)
-	HAURL     string   `env:"HA_URL"`
-	HAToken   string   `env:"HA_TOKEN"`
-	HASensors []string `env:"HA_SENSORS" envSeparator:","`
+	HAURL          string   `env:"HA_URL"`
+	HAToken        string   `env:"HA_TOKEN"`
+	HASensors      []string `env:"HA_SENSORS"       envSeparator:","`
+	HAMediaPlayers []string `env:"HA_MEDIA_PLAYERS" envSeparator:","`
 }
 
 func Load() (*Settings, error) {
