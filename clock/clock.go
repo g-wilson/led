@@ -30,7 +30,6 @@ var fontSource []byte
 
 type page func(c *image.RGBA) error
 
-
 type ClockRenderer struct {
 	font         *fopix.Drawer
 	weather      *weather.Agent
@@ -91,28 +90,28 @@ func New(ctx context.Context, cfg *config.Settings) (*ClockRenderer, error) {
 
 	// Phase 1: static pages
 	r.pages = []page{
-		// r.renderToday,
-		// r.renderTomorrow,
+		r.renderToday,
+		r.renderTomorrow,
 		r.renderDaylight,
 		r.renderMoon,
-		// r.renderCountdown,
-		// r.renderDiag,
+		r.renderCountdown,
+		r.renderDiag,
 	}
 
 	// Phase 2: dynamic area pages (skipped entirely if HA settings not provided)
 	if cfg.HAURL != "" && cfg.HAToken != "" && len(cfg.HASensors) > 0 {
-		// haClient := homeassistant.New(cfg.HAURL, cfg.HAToken, nil)
-		// sensorsAgent, err := hasensors.New(ctx, haClient, cfg.HASensors)
-		// if err != nil {
-		// 	log.Printf("sensors agent unavailable, skipping area pages: %v", err)
-		// } else {
-		// 	r.sensors = sensorsAgent
-		// 	for _, areaName := range sensorsAgent.GetAreas() {
-		// 		r.pages = append(r.pages, func(c *image.RGBA) error {
-		// 			return r.renderArea(c, areaName)
-		// 		})
-		// 	}
-		// }
+		haClient := homeassistant.New(cfg.HAURL, cfg.HAToken, nil)
+		sensorsAgent, err := hasensors.New(ctx, haClient, cfg.HASensors)
+		if err != nil {
+			log.Printf("sensors agent unavailable, skipping area pages: %v", err)
+		} else {
+			r.sensors = sensorsAgent
+			for _, areaName := range sensorsAgent.GetAreas() {
+				r.pages = append(r.pages, func(c *image.RGBA) error {
+					return r.renderArea(c, areaName)
+				})
+			}
+		}
 	}
 
 	// Phase 3: media player page (skipped if HA settings or player list not provided)
