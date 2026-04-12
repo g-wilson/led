@@ -22,9 +22,18 @@ WEATHER_LONGITUDE=xxxx
 WEATHER_REFRESH=1800
 
 # Home Assistant
+
+# Sensor pages — one page per area, shows entity state values.
+# All three must be set to enable this feature.
 HA_URL=http://192.168.1.100:8123
 HA_TOKEN=xxxx
 HA_SENSORS=sensor.temp,sensor.humidity
+
+# Now Playing page — shows the currently-playing track from a media player.
+# Provide one or more media_player entity IDs (comma-separated). The clock
+# shows a single page for whichever player is playing first in this list.
+# If multiple players are playing simultaneously, only the first is shown.
+HA_MEDIA_PLAYERS=media_player.living_room_speaker,media_player.kitchen_speaker
 
 # LED hardware (Pi only)
 LED_ROWS=32
