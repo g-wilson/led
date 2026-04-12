@@ -30,6 +30,17 @@ var fontSource []byte
 
 type page func(c *image.RGBA) error
 
+// Compile-time checks that each render method satisfies the page type.
+var (
+	_ page = (*ClockRenderer)(nil).renderToday
+	_ page = (*ClockRenderer)(nil).renderTomorrow
+	_ page = (*ClockRenderer)(nil).renderDaylight
+	_ page = (*ClockRenderer)(nil).renderMoon
+	_ page = (*ClockRenderer)(nil).renderCountdown
+	_ page = (*ClockRenderer)(nil).renderDiag
+	_ page = (*ClockRenderer)(nil).renderNowPlaying
+)
+
 type ClockRenderer struct {
 	font         *fopix.Drawer
 	weather      *weather.Agent
