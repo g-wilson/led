@@ -9,6 +9,8 @@ import (
 	"golang.org/x/image/draw"
 )
 
+var _ page = (*ClockRenderer)(nil).renderCountdown
+
 func (r *ClockRenderer) renderCountdown(c *image.RGBA) error {
 	if event := calendar.GetNextEvent(); event != nil {
 		if event.Image != nil {

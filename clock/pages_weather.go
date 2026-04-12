@@ -9,12 +9,16 @@ import (
 	"github.com/g-wilson/led/internal/weather"
 )
 
+var _ page = (*ClockRenderer)(nil).renderToday
+
 func (r *ClockRenderer) renderToday(c *image.RGBA) error {
 	w := r.weather.GetToday()
 	r.addText(c, image.Point{X: 0, Y: 8}, "Today", color.RGBA{215, 0, 88, 255})
 	r.renderWeather(c, w)
 	return nil
 }
+
+var _ page = (*ClockRenderer)(nil).renderTomorrow
 
 func (r *ClockRenderer) renderTomorrow(c *image.RGBA) error {
 	w := r.weather.GetTomorrow()
@@ -27,6 +31,8 @@ var (
 	colourSunGradient  = huegradient.Gradient{BaseHue: 40, Step: 40}
 	colourMoonGradient = huegradient.Gradient{BaseHue: 280, Step: 40}
 )
+
+var _ page = (*ClockRenderer)(nil).renderDaylight
 
 func (r *ClockRenderer) renderDaylight(c *image.RGBA) error {
 	w := r.weather.GetToday()

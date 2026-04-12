@@ -13,6 +13,8 @@ var mediaGradient = huegradient.Gradient{BaseHue: 160, Step: 75}
 var nowPlayingTitle = color.RGBA{215, 0, 88, 255}
 var nowPlayingMuted = color.RGBA{100, 100, 100, 255}
 
+var _ page = (*ClockRenderer)(nil).renderNowPlaying
+
 func (r *ClockRenderer) renderNowPlaying(c *image.RGBA) error {
 	player, ok := r.mediaPlayer.GetPlayingPlayer()
 

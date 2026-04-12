@@ -77,6 +77,8 @@ func drawMoonDisc(c *image.RGBA, centre image.Point, radius int, illum float64, 
 	}
 }
 
+var _ page = (*ClockRenderer)(nil).renderMoon
+
 func (r *ClockRenderer) renderMoon(c *image.RGBA) error {
 	illum, waxing := moonPhaseIllumination(time.Now())
 	name := moonPhaseName(illum, waxing)

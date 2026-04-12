@@ -16,6 +16,8 @@ var (
 	diagRed    = color.RGBA{200, 0, 0, 255}
 )
 
+var _ page = (*ClockRenderer)(nil).renderDiag
+
 func (r *ClockRenderer) renderDiag(c *image.RGBA) error {
 	status := r.diagnostics.GetStatus()
 	sinceText, sinceColor := diagSinceText(status)
