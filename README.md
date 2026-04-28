@@ -21,6 +21,10 @@ WEATHER_LATITUDE=xxxx
 WEATHER_LONGITUDE=xxxx
 WEATHER_REFRESH=1800
 
+# Air Quality (optional) — shows AQI, PM2.5, and O3 readings.
+# Uses the same lat/lon as weather. Omit to disable the page.
+AIRMATTERS_API_KEY=xxxx
+
 # Home Assistant
 
 # Sensor pages — one page per area, shows entity state values.

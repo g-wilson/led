@@ -33,6 +33,7 @@ type AirCondition struct {
 	PlaceName string
 	AQI       ReadingData
 	PM25      ReadingData
+	O3        ReadingData
 }
 
 type ReadingData struct {

@@ -91,6 +91,12 @@ func (r Response) toDomain() AirCondition {
 				Level: reading.Level,
 				Color: parseHexColor(reading.Color),
 			}
+		case "o3":
+			ac.O3 = ReadingData{
+				Value: reading.Value,
+				Level: reading.Level,
+				Color: parseHexColor(reading.Color),
+			}
 		}
 	}
 	return ac
