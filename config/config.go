@@ -29,7 +29,7 @@ type Settings struct {
 
 	// Air Matters (optional — skipped if API key not set)
 	AirMattersAPIKey string `env:"AIRMATTERS_API_KEY"`
-	AirMattersRefresh int   `env:"AIRMATTERS_REFRESH" envDefault:"21600"`
+	AirMattersRefresh int   `env:"AIRMATTERS_REFRESH" envDefault:"7200"`
 
 	// Home Assistant (all optional — only used when all three are set)
 	HAURL          string   `env:"HA_URL"`
