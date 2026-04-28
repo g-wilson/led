@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/g-wilson/led/config"
+	"github.com/g-wilson/led/internal/airmatters"
 	"github.com/g-wilson/led/internal/calendar"
 	"github.com/g-wilson/led/internal/diagnostics"
 	"github.com/g-wilson/led/internal/hamediaplayer"
@@ -36,6 +37,7 @@ type ClockRenderer struct {
 	diagnostics  *diagnostics.Agent
 	sensors      *hasensors.Agent
 	mediaPlayer  *hamediaplayer.Agent
+	airQuality   *airmatters.Agent
 	location     *time.Location
 	pages        []page
 	currentPage  atomic.Int32
@@ -114,7 +116,23 @@ func New(ctx context.Context, cfg *config.Settings) (*ClockRenderer, error) {
 		}
 	}
 
-	// Phase 3: media player page (skipped if HA settings or player list not provided)
+	// Phase 3: air quality page (skipped if API key not provided)
+	if cfg.AirMattersAPIKey != "" {
+		amClient := airmatters.New(cfg.AirMattersAPIKey, nil)
+		amAgent, err := airmatters.NewAgent(ctx, amClient, airmatters.AgentOptions{
+			Latitude:  cfg.WeatherLatitude,
+			Longitude: cfg.WeatherLongitude,
+			Refresh:   cfg.AirMattersRefresh,
+		})
+		if err != nil {
+			log.Printf("air quality agent unavailable, skipping air quality page: %v", err)
+		} else {
+			r.airQuality = amAgent
+			r.pages = append(r.pages, r.renderAirQuality)
+		}
+	}
+
+	// Phase 4: media player page (skipped if HA settings or player list not provided)
 	if cfg.HAURL != "" && cfg.HAToken != "" && len(cfg.HAMediaPlayers) > 0 {
 		haClient := homeassistant.New(cfg.HAURL, cfg.HAToken, nil)
 		mediaAgent, err := hamediaplayer.New(ctx, haClient, cfg.HAMediaPlayers)
