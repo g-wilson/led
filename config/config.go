@@ -27,6 +27,10 @@ type Settings struct {
 	LEDBrightness int    `env:"LED_BRIGHTNESS" envDefault:"30"`
 	LEDHardware   string `env:"LED_HARDWARE"   envDefault:"adafruit-hat"`
 
+	// Air Matters (optional — skipped if API key not set)
+	AirMattersAPIKey string `env:"AIRMATTERS_API_KEY"`
+	AirMattersRefresh int   `env:"AIRMATTERS_REFRESH" envDefault:"7200"`
+
 	// Home Assistant (all optional — only used when all three are set)
 	HAURL          string   `env:"HA_URL"`
 	HAToken        string   `env:"HA_TOKEN"`
