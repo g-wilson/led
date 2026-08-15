@@ -36,8 +36,8 @@ type SensorState struct {
 }
 
 const (
-	refreshInterval    = 1 * time.Minute
-	fetchAreasTimeout  = 15 * time.Second
+	refreshInterval      = 1 * time.Minute
+	fetchAreasTimeout    = 15 * time.Second
 	populateCacheTimeout = 30 * time.Second
 )
 

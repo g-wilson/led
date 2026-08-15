@@ -30,8 +30,8 @@ const (
 	// refreshIntervalPlaying is the polling interval when at least one player is active.
 	refreshIntervalPlaying = 10 * time.Second
 	// refreshIntervalIdle is the polling interval when nothing is playing.
-	refreshIntervalIdle    = 60 * time.Second
-	populateCacheTimeout   = 20 * time.Second
+	refreshIntervalIdle  = 60 * time.Second
+	populateCacheTimeout = 20 * time.Second
 )
 
 // StateProvider abstracts the Home Assistant API client.

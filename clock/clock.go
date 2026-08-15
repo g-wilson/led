@@ -201,7 +201,7 @@ func (r *ClockRenderer) getTimeString() string {
 func (r *ClockRenderer) isCurrentlyOvernight() bool {
 	now := time.Now().In(r.location)
 	year, month, day := now.Date()
-	today8pm := time.Date(year, month, day, 20, 0, 0, 0, r.location)
+	today8pm := time.Date(year, month, day, 22, 0, 0, 0, r.location)
 	today6am := time.Date(year, month, day, 6, 0, 0, 0, r.location)
 
 	return today8pm.Before(now) || today6am.After(now)
@@ -241,7 +241,7 @@ func formatDuration(u time.Duration) string {
 	s := u / time.Second
 
 	// less than one day to go, render more precise countdown
-	if d <= 0 {
+	if d <= 1 {
 		return fmt.Sprintf("%02dh %02dm %02ds", h, m, s)
 	}
 

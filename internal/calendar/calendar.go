@@ -178,4 +178,3 @@ func resolveImage(ref string, dir string) image.Image {
 
 	return img
 }
-
