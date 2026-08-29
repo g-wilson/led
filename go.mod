@@ -1,26 +1,26 @@
 module github.com/g-wilson/led
 
-go 1.23
+go 1.25.0
 
 require (
+	github.com/caarlos0/env/v11 v11.4.0
 	github.com/go-gl/gl v0.0.0-20231021071112-07e5d0ea2e71
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20250301202403-da16c1255728
 	github.com/joho/godotenv v1.3.0
+	github.com/lucasb-eyer/go-colorful v1.3.0
 	github.com/mcuadros/go-rpi-rgb-led-matrix v0.0.0-20180401002551-b26063b3169a
+	github.com/soniakeys/meeus/v3 v3.0.1
 	github.com/toelsiba/fopix v0.0.0-20210114151512-ed880dcce00d
-	golang.org/x/image v0.20.0
+	golang.org/x/image v0.38.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/BurntSushi/xgb v0.0.0-20210121224620-deaf085860bc // indirect
-	github.com/caarlos0/env/v11 v11.4.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
-	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
-	github.com/soniakeys/meeus/v3 v3.0.1 // indirect
 	github.com/soniakeys/unit v1.0.0 // indirect
 	golang.org/x/exp v0.0.0-20190301171323-01c40f57f5f6 // indirect
 	golang.org/x/mobile v0.0.0-20190302063618-b8c6dab863a6 // indirect
 	golang.org/x/sys v0.1.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
